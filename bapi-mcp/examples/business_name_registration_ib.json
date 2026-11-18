@@ -1,0 +1,41 @@
+{
+  "generalInformation": {
+    "businessName": "BAPI SMOKE TRADING CO",
+    "term": 3,
+    "paymentMethod": "card",
+    "email": "smoke@example.com"
+  },
+  "businessAddress": {
+    "unitOrOfficeNumber": "1",
+    "streetNumber": "1",
+    "streetName": "EXAMPLE",
+    "streetType": "ST",
+    "locality": "SAMPLE SUBURB",
+    "state": "QLD",
+    "postCode": "4000",
+    "country": "AU"
+  },
+  "serviceAddress": {
+    "unitOrOfficeNumber": "1",
+    "streetNumber": "1",
+    "streetName": "EXAMPLE",
+    "streetType": "ST",
+    "locality": "SAMPLE SUBURB",
+    "state": "QLD",
+    "postCode": "4000",
+    "country": "AU"
+  },
+  "entity": {
+    "type": "IB",
+    "subType": "PRV",
+    "abn": "51824753556",
+    "organisation": {
+      "name": "SAMPLE COMPANY PTY LTD",
+      "acn": "000000019"
+    }
+  },
+  "signatory": {
+    "name": { "givenNames": "John", "familyName": "Smith" },
+    "declaresTrueAndCorrectIndicator": true
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "generalInformation": {
+    "companyName": "BAPI SMOKE TEST PTY LTD",
+    "acnNameIndicator": false,
+    "companyType": "APTY",
+    "companyClass": "LMSH",
+    "companySubClass": "PROP",
+    "jurisdiction": "NSW",
+    "residentialOfficeholders": true
+  },
+  "registeredOffice": {
+    "address": {
+      "line2": "UNIT 4",
+      "street": "9 KENT STREET",
+      "locality": "SYDNEY",
+      "state": "NSW",
+      "postcode": "2000"
+    },
+    "occupyIndicator": false,
+    "occupierName": "ANOTHER COMPANY PTY LTD",
+    "occupierConsent": true
+  },
+  "principalPlaceOfBusiness": {
+    "address": {
+      "line2": "UNIT 4",
+      "street": "9 KENT STREET",
+      "locality": "SYDNEY",
+      "state": "NSW",
+      "postcode": "2000"
+    }
+  },
+  "officeHolders": [
+    {
+      "name": { "familyName": "DOE", "givenName1": "JOHN" },
+      "birthDetails": {
+        "date": "1980-12-31",
+        "locality": "SYDNEY",
+        "localityQualifier": "NSW",
+        "intlIndicator": false
+      },
+      "address": {
+        "street": "9 KENT STREET",
+        "locality": "SYDNEY",
+        "state": "NSW",
+        "postcode": "2000",
+        "country": "AU"
+      },
+      "roles": ["DIR"]
+    }
+  ],
+  "shareStructure": [
+    {
+      "classCode": "ORD",
+      "classTitle": "ORDINARY",
+      "numberIssued": 100,
+      "totalAmountPaid": 100,
+      "totalAmountUnpaid": 0
+    }
+  ],
+  "shareAllocation": [
+    {
+      "classCode": "ORD",
+      "numberIssued": 100,
+      "fullyPaidIndicator": true,
+      "totalAmountPaid": 100,
+      "totalAmountUnpaid": 0,
+      "amountPaidPerShare": 1,
+      "amountUnpaidPerShare": 0,
+      "beneficialOwnerIndicator": true,
+      "holdingOwners": [
+        {
+          "individual": { "familyName": "DOE", "givenName1": "JOHN" },
+          "address": {
+            "street": "9 KENT STREET",
+            "locality": "SYDNEY",
+            "state": "NSW",
+            "postcode": "2000",
+            "country": "AU"
+          }
+        }
+      ]
+    }
+  ],
+  "applicant": {
+    "individual": { "familyName": "DOE", "givenName1": "JOHN" },
+    "address": {
+      "street": "9 KENT STREET",
+      "locality": "SYDNEY",
+      "state": "NSW",
+      "postcode": "2000",
+      "country": "AU"
+    },
+    "dateSigned": "2026-11-18",
+    "declaresTrueAndCorrectIndicator": true
+  },
+  "admin": { "manualReviewIndicator": false }
+}

@@ -1,0 +1,87 @@
+{
+  "entityType": "117",
+  "entitySubType": "006",
+  "entitlement": {
+    "firstQuestion": 152,
+    "outcomeId": 7,
+    "outcome": true,
+    "questionnaire": [
+      { "questionId": 152, "answerId": 336, "nextQuestionId": 139 },
+      { "questionId": 139, "answerId": 310, "nextQuestionId": 3 },
+      { "questionId": 3, "answerId": 339, "nextQuestionId": 143 },
+      { "questionId": 143, "answerId": 318, "nextQuestionId": 0 }
+    ]
+  },
+  "applicant": {
+    "individual": {
+      "title": "Mr",
+      "familyName": "SMITH",
+      "givenName": "JOHN",
+      "dateOfBirth": "1985-06-15",
+      "genderCode": "1"
+    },
+    "tfn": "123456782"
+  },
+  "applicationDetail": {
+    "tfnIndicator": true,
+    "abnApplicationIndicator": true,
+    "tfnApplicationIndicator": false
+  },
+  "applicationReason": {
+    "code": "NEW",
+    "firstTimeDirectorIndicator": true
+  },
+  "businessActivity": {
+    "code": "7749",
+    "description": "Cleaning - commercial (offices, shops, exterior and interior building cleaning, except sand blasting or steam cleaning)",
+    "abnStartDate": "2026-11-18",
+    "governmentIndicator": false,
+    "agriculturalIndicator": false
+  },
+  "mainAddresses": {
+    "business": {
+      "street": "1 Example Street",
+      "locality": "Sample Suburb",
+      "state": "QLD",
+      "postcode": "4000",
+      "countryCode": "AU"
+    },
+    "postal": {
+      "street": "1 Example Street",
+      "locality": "Sample Suburb",
+      "state": "QLD",
+      "postcode": "4000",
+      "countryCode": "AU"
+    },
+    "businessEmail": "smoke@example.com",
+    "businessPhone": "0400000000",
+    "sameMainBusinessActivityIndicator": true,
+    "businessActivityCode": "7749",
+    "businessActivityDescription": "Cleaning - commercial (offices, shops, exterior and interior building cleaning, except sand blasting or steam cleaning)",
+    "additionalBusinessLocationsIndicator": false
+  },
+  "taxationInformation": {
+    "nonprofitIndicator": false,
+    "incomeTaxExemptionIndicator": false,
+    "australianResidentIndicator": true
+  },
+  "declaration": {
+    "fullName": "Mr JOHN SMITH",
+    "positionHeld": "Owner",
+    "phone": "0400000000",
+    "date": "2026-11-18",
+    "signatureAcceptanceIndicator": true,
+    "signatureText": "Mr JOHN SMITH"
+  },
+  "authorisedContacts": [
+    {
+      "title": "Mr",
+      "familyName": "SMITH",
+      "givenName": "JOHN",
+      "positionHeld": "Owner",
+      "email": "smoke@example.com",
+      "phone": "0400000000",
+      "preferredLanguageCode": "ENG"
+    }
+  ]
+}

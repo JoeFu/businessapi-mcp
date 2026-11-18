@@ -33,6 +33,13 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from pydantic import BaseModel, ValidationError
 
+try:  # optional: read bapi-mcp/.env so `uv run --with fastmcp server.py` finds the key without exporting it
+    from dotenv import load_dotenv
+
+    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+except ImportError:  # pragma: no cover - python-dotenv ships with fastmcp, but stay importable without it
+    pass
+
 from models import (
     COMPANY_COMBINATIONS,
     SUBTYPES_BY_ENTITY_TYPE,
