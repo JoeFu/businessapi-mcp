@@ -371,6 +371,11 @@ class OfficeHolder(_Strict):
     name: PersonName
     birthDetails: BirthDetails
     address: Address = Field(..., description="Usual residential address")
+    addressOverriddenIndicator: bool = Field(
+        False,
+        description="Required by the API although the vendor's Form 201 page omits it (sandbox returns 400 without it). "
+        "false = lodge the address as entered; true = override ASIC's address validation.",
+    )
     formerName: PersonName | None = None
     roles: list[OfficeholderRole] = Field(..., min_length=1, description='e.g. ["DIR"] or ["DIR", "SEC"]')
 

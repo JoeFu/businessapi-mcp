@@ -26,7 +26,7 @@ renewal, ASIC Forms 484 / 361 / 362 / RA52, PPSR searches, entity monitoring and
 
 | File | Purpose |
 |---|---|
-| `server.py` | Route A: the hand-written MCP server. 45 tools, 12 doc resources, 1 schema resource template, 1 workflow prompt |
+| `server.py` | Route A: the hand-written MCP server. 46 tools, 12 doc resources, 1 schema resource template, 1 workflow prompt |
 | `models.py` | Pydantic request models (Form 201 / ABNREG / BNREG / BNRENEW / 484 / 205A / 6010 / 361 / 362 / RA52 / monitored entity), ABN/ACN/TFN checksums, code tables, webhook URL validation |
 | `sandbox_smoke_test.py` | End-to-end test against the sandbox with a test key (see **Testing with a sandbox key**) |
 | `examples/*.json` | Example request payloads used by the smoke test (company, sole-trader ABN, business name for a company) |
@@ -76,9 +76,10 @@ uv run --with fastmcp bapi-mcp/sandbox_smoke_test.py
 ```
 
 The default run is read-only plus local validation: tools/list, `get_request_schema`, dry-run validation of the three
-example payloads, `get_account_status`, ABN/ACN lookups, name-availability checks, business industries, a PPSR search
-created and polled to completion, an entity-monitoring order (sandbox price $0; re-runs hit `already_monitored`, which
-counts as a pass), a simulated monitoring event, and `list_webhooks`.
+example payloads, `get_account_status`, ABN/ACN lookups, name-availability checks, a business-industry search, the ABN
+entitlement questionnaire, a PPSR search created and polled to completion, an entity-monitoring order (sandbox price $0;
+re-runs are idempotent thanks to the fixed idempotency key), a simulated monitoring event, and `list_webhooks`.
+A `200` whose body carries a non-empty `errors` object counts as a failure.
 
 ```bash
 uv run --with fastmcp bapi-mcp/sandbox_smoke_test.py --lodge
@@ -86,15 +87,17 @@ uv run --with fastmcp bapi-mcp/sandbox_smoke_test.py --lodge
 
 `--lodge` additionally submits the example company registration, sole-trader ABN application and business-name
 registration to the sandbox (ASIC and ATO **test** services, nothing is billed) and polls each for up to three minutes,
-printing the final status, document number, warnings and errors. Expect `finished` for the company, `finished` or a
-validation message from the ATO test service for the ABN, and `wating ASIC CC payment` with a payment link for the
-card-paid business name. `--no-monitoring` skips the monitoring steps on accounts where monitoring is not enabled.
+printing the final status, document number, warnings and errors. Observed on 2026-11-18: the company reached `finished`
+with a test ACN within two polls; the ABN application reached `validation ok` (the ATO test service finishes later —
+re-check with `get_request_status`); the card-paid business name reached `wating ASIC CC payment` with an ASIC UAT
+payment link. `--no-monitoring` skips the monitoring steps on accounts where monitoring is not enabled.
 
 Exit code 1 means at least one FAIL; a 401 on `get_account_status` means the key was rejected and the run stops there.
 
 Things worth confirming with your own sandbox run, because the vendor docs contradict themselves:
 - Share money fields: the validation rules say integers whose last two digits are cents (100 = $1.00), the vendor's
-  own sample sends `100` for 100 × $1 shares. The example payload follows the sample.
+  own sample sends `100` for 100 × $1 shares. The example payload follows the sample, and the sandbox accepted it
+  unchanged — the units are not validated server-side, so agree the convention with the vendor before a live lodgement.
 - Address `country`: the rules say a 2-character code, the sample writes `NEW ZEALAND`.
 - Form 484 `officeHolders.status` / `members.holdingStatus`: the 484 page glosses the codes differently from ASIC
   Tables 0006 / 0028; the models document the ASIC tables.
@@ -103,7 +106,7 @@ Things worth confirming with your own sandbox run, because the vendor docs contr
 
 ## Context size: lazy schemas and toolsets
 
-Inlining the full schemas of the ten lodgement tools into `tools/list` costs about 144k characters (~36k tokens) on
+Inlining the full schemas of the ten lodgement tools into `tools/list` costs about 147k characters (~37k tokens) on
 every connection. The default is therefore a **lazy** mode: the `request` parameter of each `lodge_*` tool is declared
 as a plain JSON object, and the model fetches the exact schema when it needs it via `get_request_schema(form)` or the
 resource `bapi://schemas/{form}`. Validation is unchanged — the same Pydantic model runs server-side and errors come
@@ -111,12 +114,12 @@ back as a readable list (e.g. `generalInformation.abn: '123' is not a valid ABN`
 
 | Configuration | Tools | Chars | ≈Tokens |
 |---|---|---|---|
-| `BAPI_INLINE_SCHEMAS=true`, all toolsets | 45 | 144,480 | 36,120 |
-| default (lazy), all toolsets | 45 | 50,289 | 12,572 |
-| `BAPI_TOOLSETS=lookup,registrations,core` | 17 | 18,266 | 4,566 |
-| `BAPI_TOOLSETS=agent_forms,core` | 15 | 17,674 | 4,418 |
+| `BAPI_INLINE_SCHEMAS=true`, all toolsets | 46 | 146,619 | 36,654 |
+| default (lazy), all toolsets | 46 | 52,432 | 13,108 |
+| `BAPI_TOOLSETS=lookup,registrations,core` | 18 | 20,409 | 5,102 |
+| `BAPI_TOOLSETS=agent_forms,core` | 15 | 17,893 | 4,473 |
 | `BAPI_TOOLSETS=monitoring,webhooks` | 16 | 17,012 | 4,253 |
-| `BAPI_TOOLSETS=lookup,ppsr` | 7 | 6,579 | 1,644 |
+| `BAPI_TOOLSETS=lookup,ppsr` | 7 | 7,494 | 1,873 |
 
 (Re-run with `uv run --with fastmcp bapi-mcp/tools_list_size.py`; tokens estimated at 4 characters each.)
 
@@ -129,19 +132,20 @@ back as a readable list (e.g. `generalInformation.abn: '123' is not a valid ABN`
   carries its group as a tag (`_meta.fastmcp.tags`) for clients that filter on tags.
 - Documentation resources are not affected by toolsets (the resource list is only URIs and names; contents load on demand).
 
-## Tools (server.py, 45)
+## Tools (server.py, 46)
 
 | Group | Tools | Notes |
 |---|---|---|
 | `lookup` | `lookup_abn` `lookup_acn` | ABN / ACN validation and lookup |
 | | `check_company_name_availability` | company name availability |
 | | `check_business_name_availability(name, holder_name)` | business-name availability; `holder_name` unlocks `availableForHolder` |
-| | `list_business_industries` | industry codes |
+| | `search_business_industries(search_term)` | ATO main-business-activity codes by keyword (`code` → businessActivity.code) |
 | `registrations` | `lodge_company_registration(request, dry_run=True)` | ASIC Form 201, about 140 fields |
 | | `lodge_abn_registration(request, dry_run=True)` | ATO ABN application, 5 entity types |
 | | `lodge_business_name_registration(request, dry_run=True)` | ASIC business name, 5 holder types |
 | | `lodge_business_name_renewal` `get_business_name_renewal_status` | renew for 1 or 3 years |
 | | `get_business_name_registration_status` `refresh_business_name_payment_link` | payment link / re-issue link |
+| | `get_abn_entitlement_questionnaire(entity_type, entity_sub_type)` | ABN entitlement questions whose answers go into `entitlement.questionnaire` |
 | | `get_request_schema(form)` | schema of any `lodge_*` request (also present with `agent_forms`) |
 | `agent_forms` | `lodge_asic_484_form` `get_asic_484_form_status` | company changes: addresses, officeholders, share issues / cancellations, UHC, concessional fees, annexures |
 | | `lodge_company_name_change` `get_company_name_change_status` | Form 205A |
@@ -237,7 +241,18 @@ asic_361_form, asic_362_form.
   authorization header, custom headers and response envelope; `wait_for_request` stops on HTTP errors.
 - Started with `BAPI_ENV=live` and a dummy live key: stop / renew / simulate monitoring, business-name renewal, webhook
   create / delete / rotate and RA52 are all refused before any HTTP call.
-- **Not yet done**: an end-to-end run with a real sandbox key — that is what `sandbox_smoke_test.py` is for.
+- Real sandbox run with a test key (`sandbox_smoke_test.py`, read-only mode): all 21 steps passed — account status,
+  ABN/ACN lookups (the ABR response uses PascalCase keys: `EntityName`, `AbnStatus`, …), both name checks, industry
+  search, entitlement questionnaire, a PPSR search that completed after two polls with one registration and a
+  certificate, a $0 monitoring order, a simulated `document_lodged` event, `list_webhooks`. Two helper endpoints turned out
+  to need query parameters the docs do not mention (`searchTerm`; `entityType` + `entitySubType`) and were fixed.
+- `--lodge` sandbox run with the example payloads: the company registration first came back `400` because every
+  officeholder needs an `addressOverriddenIndicator` the vendor's Form 201 page never mentions (now defaulted to `false`
+  in the model); re-lodged, it reached `finished` after two polls with a test ACN and `documentNumber`. The POST answers
+  `{requestId, status, billing}` at the top level and the finished status uses `registrationDate`, both unlike the docs.
+  The sole-trader ABN application was accepted (`received`, `billing.price_cents: 0`) and reached `validation ok` on the
+  ATO test service. The card-paid business name reached `wating ASIC CC payment` with an ASIC UAT payment link and a
+  `transactionFee` of 108.00 for three years.
 
 ## Endpoints without a public docs page (reachable only through `call_endpoint`)
 

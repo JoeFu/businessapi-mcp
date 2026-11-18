@@ -110,6 +110,8 @@ Rate limits: helper/search endpoints 1,200 req/min; lodgement/status endpoints 6
   · 405 right path, wrong method.
 - General errors: "errors": ["Unauthorised."]
   Lodgement errors: "errors": [{{"details": "V418 Country name not verified…", "target": "NEWZEALAND"}}]
+  ASIC rejection (status "rejected", seen in the sandbox): "errors": [{{"details": {{"text": "<full ASIC advice letter>"}}, "target": null}}]
+  and "response": {{"proposed_name", "document_number", "date_of_advice", "asic_advice_type_code": "201RJCT", …}} (snake_case).
 
 ## Lodgement lifecycle (asynchronous!)
 new -> transmission ok -> validation ok | validation failed -> manual review -> finished | rejected
@@ -149,8 +151,8 @@ POST,GET = POST lodges and returns requestId; GET /status/{requestId} (or the en
 ## Helpers (GET, free; pk_ or sk_ keys)
 GET /helpers/company-name-availability?name=                  (typed tool)
 GET /helpers/business-name-availability?name=
-GET /helpers/entitlement-questionnaire                        ABN entitlement questions (answers go in entitlement.questionnaire)
-GET /helpers/business-industries                              (typed tool)
+GET /helpers/entitlement-questionnaire?entityType=&entitySubType=   (typed tool get_abn_entitlement_questionnaire)
+GET /helpers/business-industries?searchTerm=                  (typed tool search_business_industries; searchTerm is required)
 GET /acn/helpers/payment-references
 
 ## Data validation & lookup (GET, sk_)
@@ -268,7 +270,9 @@ COMPANY_DOC = """# Company registration (ASIC Form 201) — POST /company-regist
 Tool: lodge_company_registration(request, dry_run). Schema = https://businessapi.com.au/developers/api/company-registrations
 
 ## Workflow
-1. check_company_name_availability(name) — the name must include legal elements ("… PTY LTD").
+1. check_company_name_availability(name) — the name must include legal elements ("… PTY LTD"). If `availability` is
+   "Unavailable", STOP and ask for another name: ASIC rejects identical names after lodgement (advice 201RJCT) and the
+   application is not reusable — the sandbox name test runs against the real register, so real names collide.
 2. Collect: officeholders (name, DOB 18+, birth place, residential address, roles DIR/SEC), registered office
    (street address, who occupies it), principal place of business, share structure + who holds the shares,
    applicant (who lodges), optional ultimate holding company.
@@ -291,12 +295,23 @@ shareAllocation: one entry per holding (joint holders go in one entry's holdingO
 - Applicant: individual OR organisation (+ signatory individual and role DIR/SEC/ALT/AGT); dateSigned ≤ today;
   declaresTrueAndCorrectIndicator true.
 - Money fields (totalAmountPaid, amountPaidPerShare…) are integers whose last two digits are cents per the docs
-  (100 = $1.00). The vendor's sample sends 100 for 100 x $1 shares, which contradicts that — verify in the sandbox.
+  (100 = $1.00). The vendor's sample sends 100 for 100 x $1 shares, which contradicts that. The sandbox accepted the
+  sample's values unchanged, so the units are not validated server-side — agree the convention with the vendor before
+  a live lodgement.
+- Every officeHolder needs addressOverriddenIndicator (the API returns 400 without it although the vendor page omits it);
+  the model defaults it to false = lodge the address as entered.
 - Addresses: street ≤52, locality ≤30, state from Table 0035, 4-digit postcode; country ISO alpha-2 (AU default).
 
-## Status response (finished)
-{"requestId", "status": "finished", "documentNumber", "response": {"companyName", "acn", "companyType",
- "companyClass", "companySubClass", "jurisdiction", "dateOfRegistration"}, "warnings", "errors"}
+## Responses (verified in the sandbox, 2026-11-18)
+POST -> {"requestId", "status": "new", "warnings", "errors", "billing": {"price_cents", "charged_cents"}} at the top level
+(the vendor page shows {"response": {"requestId"}} — accept both). The sandbox finished the registration within two
+10-second polls and issued a test ACN.
+GET /status/{requestId} finished -> {"requestId", "status": "finished", "documentNumber", "response": {"companyName", "acn",
+ "companyType", "companyClass", "companySubClass", "jurisdiction", "registrationDate"}, "warnings", "errors", "billing"}
+(the vendor page calls the date dateOfRegistration; the API returns registrationDate).
+Rejected -> {"status": "rejected", "documentNumber", "response": {"proposed_name", "document_number", "date_of_advice",
+ "asic_advice_type_code": "201RJCT", "asic_advice_type_description"}, "errors": [{"details": {"text": "<ASIC letter>"}, "target": null}]}
+— quote the letter's reason (e.g. identical to a registered business name in NSW) to the user and offer a new name.
 """
 
 ABN_DOC = """# ABN registration (ATO ABNREG) — POST /abn-registrations
@@ -314,9 +329,9 @@ Staged alternative (save partial form data, lodge later): /abn-registration-data
 entitySubTypeAdditional: UPC unlisted public co · CLP corporate limited partnership · CHT closely held trust · LBG limited by guarantee
 
 ## Workflow
-1. GET /helpers/entitlement-questionnaire (call_endpoint) -> walk the applicant through the questions; record
+1. get_abn_entitlement_questionnaire(entity_type, entity_sub_type) -> walk the applicant through the questions; record
    {questionId, answerId, nextQuestionId} per step plus firstQuestion/outcomeId/outcome into `entitlement`.
-2. GET /helpers/business-industries for businessActivity.code/description.
+2. search_business_industries("<keyword>") -> pick an activity: its `code` is businessActivity.code and `fullName` the description.
 3. lodge_abn_registration(request, dry_run=true) -> review with the user (TFNs are sensitive: never echo them back).
 4. dry_run=false -> {requestId, status: received, billing}. A duplicate in-progress application returns the existing
    requestId with a warning instead of lodging again.
@@ -757,6 +772,9 @@ async def lookup_abn(abn: str) -> dict[str, Any]:
 
     abn: 11 digits (spaces allowed). Free, read-only, no lodgement. Use this before any registration,
     PPSR or monitoring call that needs a confirmed ABN / entity name.
+    Response (ABR data, PascalCase keys): Abn, AbnStatus (Active / Cancelled), AbnStatusEffectiveFrom, Acn, EntityName,
+    EntityTypeCode / EntityTypeName, Gst (GST registration date, empty if none), AddressState, AddressPostcode, AddressDate,
+    BusinessName[] (current business names), Message (non-empty when the ABN is unknown or invalid).
     """
     return await _call("GET", f"/lookup/abn/{abn.replace(' ', '')}")
 
@@ -766,6 +784,8 @@ async def lookup_acn(acn: str) -> dict[str, Any]:
     """Validate an Australian Company Number (ACN) and look the company up on ASIC.
 
     acn: 9 digits (spaces allowed). Free, read-only.
+    Response (ASIC data): name, type (e.g. Australian Proprietary Company), class, subClass, status (Registered /
+    Deregistered …), incorporationState, registrationDate, addresses[] {type, address, suburb, postcode, state}.
     """
     return await _call("GET", f"/lookup/acn/{acn.replace(' ', '')}")
 
@@ -794,10 +814,27 @@ async def check_business_name_availability(name: str, holder_name: str | None = 
 
 
 @tool("lookup", annotations={"readOnlyHint": True, "openWorldHint": True})
-async def list_business_industries() -> dict[str, Any]:
-    """List the business-industry (main business activity) codes and descriptions used by ABN / business-name
-    registrations (businessActivity.code / description). Free helper."""
-    return await _call("GET", "/helpers/business-industries")
+async def search_business_industries(search_term: str) -> dict[str, Any]:
+    """Search the ATO main-business-activity list by keyword (e.g. "cleaning", "software", "cafe"). Free helper.
+
+    Returns {searchTerm, activitiesCount, activities: [{score, code, industryCode, fullName}]} ranked by relevance.
+    Use `code` (4 digits, e.g. 7749) as businessActivity.code and `fullName` as businessActivity.description in an ABN
+    application; `industryCode` is the ANZSIC class. The endpoint needs a search term — there is no full list.
+    """
+    if not search_term.strip():
+        raise ValueError("search_term is required, e.g. 'cleaning'")
+    return await _call("GET", "/helpers/business-industries", params={"searchTerm": search_term.strip()})
+
+
+@tool("registrations", annotations={"readOnlyHint": True, "openWorldHint": True})
+async def get_abn_entitlement_questionnaire(entity_type: str, entity_sub_type: str) -> dict[str, Any]:
+    """Fetch the ABN entitlement questionnaire for an ATO entity type / sub-type (e.g. 117/006 sole trader, 051/027 private
+    company, 161/150 partnership, 212/077 trading trust, 210/196 SMSF; codes in bapi://docs/ato-codes). Free helper.
+
+    Walk the applicant through the questions and record each step as {questionId, answerId, nextQuestionId} in
+    `entitlement.questionnaire`, plus firstQuestion / outcomeId / outcome, for lodge_abn_registration.
+    """
+    return await _call("GET", "/helpers/entitlement-questionnaire", params={"entityType": entity_type, "entitySubType": entity_sub_type})
 
 
 # --------------------------------------------------------------------------------------
@@ -813,8 +850,8 @@ async def _lodge_company_registration(request: CompanyRegistrationRequest, dry_r
     Before lodging: check_company_name_availability(name).
 
     dry_run=true (default): validate locally (all "Mandatory IF" rules from the docs) and return the exact JSON that
-    would be posted — show it and the fees to the user. dry_run=false: lodge; returns {response: {requestId}}.
-    Then wait_for_request(requestId) -> 'finished' gives acn / dateOfRegistration; certificate PDF at
+    would be posted — show it and the fees to the user. dry_run=false: lodge; returns {requestId, status: "new", billing}.
+    Then wait_for_request(requestId) -> 'finished' gives acn / registrationDate / documentNumber; certificate PDF at
     GET /company-registrations/{requestId}/certificate, document pack at …/documents.
     """
     payload = request.to_payload()
@@ -829,7 +866,8 @@ async def _lodge_abn_registration(request: AbnRegistrationRequest, dry_run: bool
     `request` mirrors https://businessapi.com.au/developers/api/abn-registrations; read bapi://docs/abn-registrations
     (entity types, workflow, rules) and bapi://docs/ato-codes first. Sole trader = entityType 117 / entitySubType 006;
     company = 051/027 (needs the ACN); partnership = 161/087|150; trust = 212/…; SMSF = 210/196.
-    The entitlement questionnaire answers come from GET /helpers/entitlement-questionnaire (call_endpoint).
+    The entitlement questionnaire answers come from get_abn_entitlement_questionnaire(entity_type, entity_sub_type); activity
+    codes from search_business_industries(keyword).
     TFNs are sensitive: collect them, validate (checksum is checked locally), never repeat them back to the user.
 
     dry_run=true (default): validate and return the payload (the server adds testTransmissionIndicator from its env).
@@ -1444,7 +1482,9 @@ async def wait_for_request(
 
 @tool("core", annotations={"readOnlyHint": True, "openWorldHint": True})
 async def get_account_status() -> dict[str, Any]:
-    """Show the account / plan state for the current API key (plan, billing readiness, scopes). Use it to explain 403s."""
+    """Account / plan state for the current API key: accountName, companyName, abn, createdAt, planId, planCreatedAt,
+    planEndsAt and stats {abnLodgementForms, taxLodgementForms, acnLodgementsForms, acnRegisteredAgentForms,
+    bnLodgementsForms, bnRenewLodgementsForms, bapiHelpers} (usage counters). Use it to explain 403s and plan limits."""
     return await _call("GET", "/account-status")
 
 

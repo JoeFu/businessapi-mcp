@@ -533,6 +533,12 @@ components:
         address:
           $ref: '#/components/schemas/Address'
           description: Usual residential address
+        addressOverriddenIndicator:
+          default: false
+          description: Required by the API although the vendor's Form 201 page omits it (sandbox returns 400 without it).
+            false = lodge the address as entered; true = override ASIC's address validation.
+          title: Addressoverriddenindicator
+          type: boolean
         formerName:
           anyOf:
           - $ref: '#/components/schemas/PersonName'
@@ -3979,18 +3985,35 @@ paths:
           description: Availability result
   /helpers/business-industries:
     get:
-      operationId: list_business_industries
-      summary: List business-industry codes accepted by ABN / business-name registrations.
+      operationId: search_business_industries
+      summary: Search ATO main-business-activity codes by keyword; returns activities[] {score, code, industryCode, fullName}.
+      parameters:
+      - name: searchTerm
+        in: query
+        required: true
+        schema:
+          type: string
       responses:
         '200':
-          description: Industry list
+          description: '{searchTerm, activitiesCount, activities[]}'
   /helpers/entitlement-questionnaire:
     get:
       operationId: get_abn_entitlement_questionnaire
-      summary: ABN entitlement questionnaire (questions an applicant must answer before ABN registration).
+      summary: ABN entitlement questionnaire for an ATO entity type / sub-type (answers go into entitlement.questionnaire).
+      parameters:
+      - name: entityType
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: entitySubType
+        in: query
+        required: true
+        schema:
+          type: string
       responses:
         '200':
-          description: Questionnaire
+          description: questionnaire
   /lookup/abn/{abn}:
     get:
       operationId: lookup_abn

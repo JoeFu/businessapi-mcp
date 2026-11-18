@@ -233,6 +233,29 @@ MONITORING_PATHS: dict[str, dict[str, Any]] = {
 }
 
 
+HELPER_PATHS: dict[str, dict[str, Any]] = {
+    "/helpers/business-industries": {
+        "get": {
+            "operationId": "search_business_industries",
+            "summary": "Search ATO main-business-activity codes by keyword; returns activities[] {score, code, industryCode, fullName}.",
+            "parameters": [{"name": "searchTerm", "in": "query", "required": True, "schema": {"type": "string"}}],
+            "responses": {"200": {"description": "{searchTerm, activitiesCount, activities[]}"}},
+        }
+    },
+    "/helpers/entitlement-questionnaire": {
+        "get": {
+            "operationId": "get_abn_entitlement_questionnaire",
+            "summary": "ABN entitlement questionnaire for an ATO entity type / sub-type (answers go into entitlement.questionnaire).",
+            "parameters": [
+                {"name": "entityType", "in": "query", "required": True, "schema": {"type": "string"}},
+                {"name": "entitySubType", "in": "query", "required": True, "schema": {"type": "string"}},
+            ],
+            "responses": {"200": {"description": "questionnaire"}},
+        }
+    },
+}
+
+
 def main() -> None:
     spec = yaml.safe_load(SPEC.read_text(encoding="utf-8"))
     schemas = spec.setdefault("components", {}).setdefault("schemas", {})
@@ -270,6 +293,8 @@ def main() -> None:
     for path, ops in MONITORING_PATHS.items():
         paths[path] = ops
     for path, ops in WEBHOOK_PATHS.items():
+        paths[path] = ops
+    for path, ops in HELPER_PATHS.items():  # verified against the sandbox: these helpers need query parameters
         paths[path] = ops
 
     header = (

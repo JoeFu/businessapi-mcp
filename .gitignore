@@ -8,3 +8,9 @@ venv/
 .env
 .mcp.json
 *.local.json
+
+# Local run logs
+*.log
+
+# Downloaded PDFs
+bapi-mcp/downloads/

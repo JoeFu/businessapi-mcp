@@ -76,6 +76,9 @@ async def step_http(c: Client, step: str, tool: str, args: dict, ok_statuses=(20
         record("FAIL", step, r.content[0].text[:200]); return d
     status = d.get("httpStatus")
     if status in ok_statuses:
+        errs = d.get("errors")
+        if errs:  # the API sometimes answers 200 with an errors object (e.g. a missing required query parameter)
+            record("FAIL", step, f"HTTP {status} but errors present: {json.dumps(errs, ensure_ascii=False)[:160]}"); return d
         record("PASS", step, summary(d, *show)); return d
     if status == 401:
         record("FAIL", step, "401 — the API key was rejected (wrong key, or a live key on the sandbox)"); return d
@@ -111,19 +114,17 @@ async def main(lodge: bool, monitoring: bool) -> int:
             record("FAIL" if r.is_error or not d.get("dryRun") else "PASS", label, (r.content[0].text[:160] if r.is_error else d.get("wouldPost", "")))
 
         # ---- read-only network steps ----
-        acct = await step_http(c, "get_account_status", "get_account_status", {}, show=("plan", "status", "environment"))
+        acct = await step_http(c, "get_account_status", "get_account_status", {}, show=("planId", "planEndsAt"))
         if acct.get("httpStatus") == 401:
             print("\nStopping: the sandbox rejected the key, so nothing else can be tested.")
             return finish()
-        await step_http(c, "lookup_abn 51 824 753 556", "lookup_abn", {"abn": "51 824 753 556"}, show=("entityName", "abn", "status", "response"))
-        await step_http(c, "lookup_acn 004 085 616", "lookup_acn", {"acn": "004 085 616"}, show=("companyName", "acn", "status", "response"))
+        await step_http(c, "lookup_abn 51 824 753 556", "lookup_abn", {"abn": "51 824 753 556"}, show=("EntityName", "AbnStatus", "EntityTypeName"))
+        await step_http(c, "lookup_acn 004 085 616", "lookup_acn", {"acn": "004 085 616"}, show=("name", "status", "type"))
         await step_http(c, "check_company_name_availability", "check_company_name_availability", {"name": "BAPI SMOKE TEST PTY LTD"}, show=("availability", "available", "response"))
         await step_http(c, "check_business_name_availability (+holder)", "check_business_name_availability",
                         {"name": "BAPI SMOKE TRADING CO", "holder_name": "SAMPLE COMPANY PTY LTD"}, show=("availability", "availableForHolder", "asicUnavailable"))
-        ind = await step_http(c, "list_business_industries", "list_business_industries", {})
-        if ind.get("httpStatus") == 200:
-            size = len(ind.get("data") or ind.get("response") or ind)
-            RESULTS[-1] = ("PASS", RESULTS[-1][1], f"{size} entries")
+        await step_http(c, "search_business_industries('cleaning')", "search_business_industries", {"search_term": "cleaning"}, show=("activitiesCount",))
+        await step_http(c, "get_abn_entitlement_questionnaire(117/006)", "get_abn_entitlement_questionnaire", {"entity_type": "117", "entity_sub_type": "006"})
 
         # ---- PPSR: create ($0 in sandbox) and poll ----
         ppsr = await step_http(c, "create_ppsr_search (abn)", "create_ppsr_search", {"abn": "51824753556"}, show=("requestId", "status"))
