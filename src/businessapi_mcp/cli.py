@@ -23,6 +23,7 @@ from . import config
 from .config import SETUP_HINT, key_environment, load_settings, write_key
 
 PUBLISHED_COMMAND = {"command": "uvx", "args": ["businessapi-mcp"]}
+GIT_COMMAND = {"command": "uvx", "args": ["--from", "git+https://github.com/JoeFu/businessapi-mcp", "businessapi-mcp"]}
 
 
 def _dev_command(repo: Path) -> dict[str, object]:
@@ -139,7 +140,7 @@ def _merge_json(path: Path, section: str, name: str, entry: dict[str, object], d
 
 
 def cmd_install(args: argparse.Namespace) -> None:
-    entry = _dev_command(Path(args.dev).resolve()) if args.dev else dict(PUBLISHED_COMMAND)
+    entry = _dev_command(Path(args.dev).resolve()) if args.dev else dict(GIT_COMMAND if args.git else PUBLISHED_COMMAND)
     name = args.name
     if args.client == "claude-code":
         cmd = ["claude", "mcp", "add", "--scope", args.scope, name, "--", str(entry["command"]), *map(str, entry["args"])]  # type: ignore[arg-type]
@@ -193,6 +194,7 @@ def build_parser() -> argparse.ArgumentParser:
     install.add_argument("--name", default="bapi", help="server name inside the client (default: bapi)")
     install.add_argument("--scope", default="user", choices=["user", "project", "local"], help="claude-code only (default: user)")
     install.add_argument("--dev", metavar="REPO", help="use `uv run --directory REPO businessapi-mcp` (local checkout) instead of `uvx businessapi-mcp`")
+    install.add_argument("--git", action="store_true", help="run straight from GitHub (uvx --from git+https://...) instead of the PyPI package")
     install.add_argument("--dry-run", action="store_true", help="print what would be written without touching any file")
     return p
 

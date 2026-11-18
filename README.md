@@ -38,6 +38,8 @@ Requires [uv](https://docs.astral.sh/uv/) (it fetches and runs the package; noth
    ```
 
    This is equivalent to `claude mcp add bapi -- uvx businessapi-mcp`; the key never appears in client configuration.
+   Not on PyPI yet, or want the latest commit? Add `--git` to run straight from GitHub
+   (`uvx --from git+https://github.com/JoeFu/businessapi-mcp businessapi-mcp`).
 
 Then open a new session and ask: *"Which company has ABN 51 824 753 556?"* (it calls `lookup_abn`) or
 *"Register a company in the sandbox"*. `uvx businessapi-mcp doctor` runs a self-test against the sandbox if anything

@@ -57,6 +57,8 @@ def test_cli_install_mcp_json_and_dry_runs(capsys, tmp_path, monkeypatch):
 
     cli.main(["install", "claude-code", "--dry-run"])
     assert "claude mcp add --scope user bapi -- uvx businessapi-mcp" in capsys.readouterr().out
+    cli.main(["install", "claude-code", "--git", "--dry-run"])
+    assert "--from git+https://github.com/JoeFu/businessapi-mcp businessapi-mcp" in capsys.readouterr().out
 
 
 def test_cli_setup_writes_key_without_verifying(tmp_path, monkeypatch, capsys):
