@@ -1,0 +1,4648 @@
+# Business API (businessapi.com.au) v2 — OpenAPI 3.1 for route B (server_from_openapi.py).
+# The vendor publishes no machine-readable spec; this file is hand-maintained EXCEPT the three lodgement
+# request schemas and their paths, which export_openapi.py regenerates from models.py (comments are not
+# preserved by the YAML dumper, so keep notes here in the header).
+# Paths are relative to the v2 root; the HTTP client supplies /api/v2 or /api/test/v2 from BAPI_ENV.
+# Covered: helpers, lookup, PPSR, status, company/ABN/business-name registration, business-name renewal, Forms 484/205A/
+# 6010/361/362/RA52, entity monitoring, webhooks. Not covered (no public docs page): name reservations, extracts,
+# tax/registrations, asic-370/492/902/ra17/ra50/ra51/ra61/ra63/ra65/ra67/ra71-forms, asic-inbox.
+openapi: 3.1.0
+info:
+  title: Business API (AU) v2
+  version: '2'
+  description: 'Australian ASIC / ATO / ABRS / PPSR digital-service-provider API.
+
+    Lodgements are asynchronous: POST returns a requestId; poll GET /status/{requestId}
+
+    (status: new -> transmission ok -> validation ok | validation failed -> manual review -> finished | rejected).
+
+    Live calls are billed (company registration ~$50, ABN ~$25, business name ~$15, PPSR search $6).
+
+    '
+servers:
+- url: https://businessapi.com.au/api/test/v2
+  description: Sandbox (bapi_sk_test_ keys, $0)
+- url: https://businessapi.com.au/api/v2
+  description: Live (bapi_sk_live_ keys, billed)
+security:
+- bearer: []
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: 'Authorization: Bearer bapi_sk_{test|live}_...'
+  schemas:
+    ErrorEnvelope:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            oneOf:
+            - type: string
+            - type: object
+              properties:
+                details:
+                  type: string
+                target:
+                  type: string
+    LodgementStatus:
+      type: object
+      properties:
+        requestId:
+          type: integer
+        status:
+          type: string
+          description: new | transmission ok | validation ok | validation failed | manual review | finished | rejected
+        documentNumber:
+          type: string
+        response:
+          type: object
+        warnings: {}
+        errors: {}
+    PpsrSearchRequest:
+      type: object
+      description: Send exactly ONE identifier set; the search type is inferred from the fields present.
+      properties:
+        abn:
+          type: string
+          pattern: ^[0-9]{11}$
+          description: Grantor search by ABN
+        acn:
+          type: string
+          pattern: ^[0-9]{9}$
+          description: Grantor search by ACN
+        arbn:
+          type: string
+          pattern: ^[0-9]{9}$
+        arsn:
+          type: string
+          pattern: ^[0-9]{9}$
+        vin:
+          type: string
+          maxLength: 17
+          description: Vehicle serial search + NEVDIS data
+        serialNumber:
+          type: string
+          maxLength: 17
+          description: Non-VIN serial; requires serialNumberType
+        serialNumberType:
+          type: string
+          enum:
+          - ChassisNumber
+          - HIN
+          - OfficialNumber
+        registrationNumber:
+          type: string
+          maxLength: 20
+          description: Look up one PPSR registration (no certificate)
+        organisationName:
+          type: string
+          maxLength: 255
+        familyName:
+          type: string
+          maxLength: 255
+          description: Individual search (with givenNames
+          dateOfBirth: null
+          authorisedPurpose): null
+        givenNames:
+          type: string
+          maxLength: 255
+        dateOfBirth:
+          type: string
+          format: date
+        authorisedPurpose:
+          type: boolean
+          description: Must be true for individual searches (PPS Act authorised purpose)
+      additionalProperties: false
+    Address:
+      additionalProperties: false
+      description: Address of a person or organisation; may be overseas. Australian addresses need state + postcode.
+      properties:
+        careOf:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          title: Careof
+        line2:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          description: Unit / floor / building
+          title: Line2
+        street:
+          maxLength: 52
+          title: Street
+          type: string
+        locality:
+          description: Suburb / town / city
+          maxLength: 30
+          title: Locality
+          type: string
+        state:
+          anyOf:
+          - enum:
+            - ACT
+            - CCK
+            - CXR
+            - JBT
+            - NSW
+            - NFK
+            - NT
+            - QLD
+            - SA
+            - TAS
+            - VIC
+            - WA
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when country is AU
+          title: State
+        postcode:
+          anyOf:
+          - pattern: ^\d{4}$
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when country is AU
+          title: Postcode
+        country:
+          default: AU
+          description: ISO 3166-1 alpha-2 code, e.g. AU, NZ, GB
+          maxLength: 2
+          minLength: 2
+          title: Country
+          type: string
+      required:
+      - street
+      - locality
+      title: Address
+      type: object
+    Admin:
+      additionalProperties: false
+      properties:
+        manualReviewIndicator:
+          description: Ask Business API staff to review before transmission
+          title: Manualreviewindicator
+          type: boolean
+        manualReviewText:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Required when manualReviewIndicator is true
+          title: Manualreviewtext
+      required:
+      - manualReviewIndicator
+      title: Admin
+      type: object
+    Applicant:
+      additionalProperties: false
+      description: Who is lodging the application (an individual, or an organisation plus its signatory).
+      properties:
+        individual:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+        organisation:
+          anyOf:
+          - $ref: '#/components/schemas/OrganisationRef'
+          - type: 'null'
+          default: null
+        organisationSignatoryIndividual:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+          description: Required when the applicant is an organisation
+        organisationSignatoryRole:
+          anyOf:
+          - enum:
+            - DIR
+            - SEC
+            - ALT
+            - AGT
+            type: string
+          - type: 'null'
+          default: null
+          description: DIR, SEC, ALT or AGT; required when the applicant is an organisation
+          title: Organisationsignatoryrole
+        address:
+          $ref: '#/components/schemas/Address'
+        dateSigned:
+          description: YYYY-MM-DD, not in the future
+          format: date
+          title: Datesigned
+          type: string
+        declaresTrueAndCorrectIndicator:
+          description: Must be true
+          title: Declarestrueandcorrectindicator
+          type: boolean
+      required:
+      - address
+      - dateSigned
+      - declaresTrueAndCorrectIndicator
+      title: Applicant
+      type: object
+    AuStreetAddress:
+      additionalProperties: false
+      description: Australian street address for the registered office / principal place of business (no PO boxes).
+      properties:
+        careOf:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          description: C/- line, if any
+          title: Careof
+        line2:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          description: Unit / floor / building
+          title: Line2
+        street:
+          description: Street number and name, e.g. "9 KENT STREET"
+          maxLength: 52
+          title: Street
+          type: string
+        locality:
+          description: Suburb / town
+          maxLength: 30
+          title: Locality
+          type: string
+        state:
+          enum:
+          - ACT
+          - CCK
+          - CXR
+          - JBT
+          - NSW
+          - NFK
+          - NT
+          - QLD
+          - SA
+          - TAS
+          - VIC
+          - WA
+          title: State
+          type: string
+        postcode:
+          pattern: ^\d{4}$
+          title: Postcode
+          type: string
+      required:
+      - street
+      - locality
+      - state
+      - postcode
+      title: AuStreetAddress
+      type: object
+    BirthDetails:
+      additionalProperties: false
+      properties:
+        date:
+          description: YYYY-MM-DD; officeholder must be 18+
+          format: date
+          title: Date
+          type: string
+        locality:
+          description: Birth suburb (Australia) or city (overseas)
+          maxLength: 30
+          title: Locality
+          type: string
+        localityQualifier:
+          description: Birth state code (ACT, NSW, …) or 2-letter ISO country code when born overseas
+          maxLength: 3
+          title: Localityqualifier
+          type: string
+        intlIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: true when born overseas (localityQualifier is then a country code)
+          title: Intlindicator
+      required:
+      - date
+      - locality
+      - localityQualifier
+      title: BirthDetails
+      type: object
+    GeneralInformation:
+      additionalProperties: false
+      description: Company name, type/class/sub-class and jurisdiction.
+      properties:
+        companyName:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          default: null
+          description: Full proposed name INCLUDING legal elements, e.g. "ACME TRADING PTY LTD". Required unless acnNameIndicator
+            is true.
+          title: Companyname
+        acnNameIndicator:
+          description: true = the company will be named by its ACN (e.g. 'A.C.N. 123 456 789 PTY LTD')
+          title: Acnnameindicator
+          type: boolean
+        acnNameLegalElements:
+          anyOf:
+          - enum:
+            - PTY
+            - PTY.
+            - PROPRIETARY
+            - LTD
+            - LTD.
+            - LIMITED
+            - NL
+            - N.L.
+            - NO LIABILITY
+            type: string
+          - type: 'null'
+          default: null
+          description: Legal elements for an ACN-named company (required when acnNameIndicator is true)
+          title: Acnnamelegalelements
+        companyType:
+          description: APTY for a Pty Ltd, APUB for a public company
+          enum:
+          - APUB
+          - APTY
+          - FNOS
+          - RACN
+          title: Companytype
+          type: string
+        companyClass:
+          description: LMSH for an ordinary company limited by shares
+          enum:
+          - LMGT
+          - LMSG
+          - LMSH
+          - NLIA
+          - UNLM
+          title: Companyclass
+          type: string
+        companySubClass:
+          description: PROP for an ordinary proprietary company
+          enum:
+          - PNPC
+          - PSTC
+          - HUNT
+          - PROP
+          - LISN
+          - LISS
+          - LIST
+          - STFI
+          - NLTD
+          - ULSN
+          - ULSS
+          - ULST
+          title: Companysubclass
+          type: string
+        jurisdiction:
+          description: State/territory of registration
+          enum:
+          - ACT
+          - CCK
+          - CXR
+          - JBT
+          - NSW
+          - NFK
+          - NT
+          - QLD
+          - SA
+          - TAS
+          - VIC
+          - WA
+          title: Jurisdiction
+          type: string
+        governedByConstitution:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: Required for APUB companies of class NLIA/LMGT with sub-class ULSN/ULSS
+          title: Governedbyconstitution
+        nonCashSharesIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Required for APUB + LMSH: will any shares be issued for non-cash consideration?'
+          title: Noncashsharesindicator
+        nameReservedIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: true if the name was reserved with a Form 410 (then supply nameReserved)
+          title: Namereservedindicator
+        nameIdenticalIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: true if the name is identical to an existing registered business name
+          title: Nameidenticalindicator
+        nameIdenticalAbn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: ABN of the business-name holder; required when nameIdenticalIndicator is true
+          title: Nameidenticalabn
+        residentialOfficeholders:
+          description: Are all officeholder addresses their usual residential addresses?
+          title: Residentialofficeholders
+          type: boolean
+      required:
+      - acnNameIndicator
+      - companyType
+      - companyClass
+      - companySubClass
+      - jurisdiction
+      - residentialOfficeholders
+      title: GeneralInformation
+      type: object
+    NameIdentical:
+      additionalProperties: false
+      properties:
+        state:
+          enum:
+          - ACT
+          - NSW
+          - NT
+          - QLD
+          - SA
+          - TAS
+          - VIC
+          - WA
+          title: State
+          type: string
+        registrationNumber:
+          description: State registration number of the business name
+          maxLength: 10
+          title: Registrationnumber
+          type: string
+      required:
+      - state
+      - registrationNumber
+      title: NameIdentical
+      type: object
+    NameReserved:
+      additionalProperties: false
+      description: Details of the Form 410 name reservation (who reserved it + reservation document number).
+      properties:
+        individual:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+        organisation:
+          anyOf:
+          - $ref: '#/components/schemas/OrganisationRef'
+          - type: 'null'
+          default: null
+        documentNumber:
+          description: Form 410 reservation document number
+          maxLength: 9
+          title: Documentnumber
+          type: string
+      required:
+      - documentNumber
+      title: NameReserved
+      type: object
+    OfficeHolder:
+      additionalProperties: false
+      description: A director (DIR) or secretary (SEC). A proprietary company needs at least one director resident in Australia.
+      properties:
+        name:
+          $ref: '#/components/schemas/PersonName'
+        birthDetails:
+          $ref: '#/components/schemas/BirthDetails'
+        address:
+          $ref: '#/components/schemas/Address'
+          description: Usual residential address
+        formerName:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+        roles:
+          description: e.g. ["DIR"] or ["DIR", "SEC"]
+          items:
+            enum:
+            - DIR
+            - SEC
+            type: string
+          minItems: 1
+          title: Roles
+          type: array
+      required:
+      - name
+      - birthDetails
+      - address
+      - roles
+      title: OfficeHolder
+      type: object
+    OpenHours:
+      additionalProperties: false
+      properties:
+        openHour:
+          description: HHMM 24h, e.g. 0900
+          pattern: ^\d{4}$
+          title: Openhour
+          type: string
+        closeHour:
+          description: HHMM 24h, e.g. 1700
+          pattern: ^\d{4}$
+          title: Closehour
+          type: string
+      required:
+      - openHour
+      - closeHour
+      title: OpenHours
+      type: object
+    OrganisationRef:
+      additionalProperties: false
+      description: A company / body named in the application.
+      properties:
+        name:
+          maxLength: 200
+          title: Name
+          type: string
+        acn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: 9-digit ACN or ARBN (spaces allowed; checksum validated)
+          title: Acn
+      required:
+      - name
+      title: OrganisationRef
+      type: object
+    Party:
+      additionalProperties: false
+      description: An individual OR an organisation (exactly one) with an address — used for shareholders and members.
+      properties:
+        individual:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+        organisation:
+          anyOf:
+          - $ref: '#/components/schemas/OrganisationRef'
+          - type: 'null'
+          default: null
+        address:
+          $ref: '#/components/schemas/Address'
+      required:
+      - address
+      title: Party
+      type: object
+    PersonName:
+      additionalProperties: false
+      description: A natural person's name as ASIC wants it (no company words such as PTY or LTD).
+      properties:
+        familyName:
+          maxLength: 30
+          title: Familyname
+          type: string
+        givenName1:
+          description: First given name
+          maxLength: 20
+          title: Givenname1
+          type: string
+        givenName2:
+          anyOf:
+          - maxLength: 20
+            type: string
+          - type: 'null'
+          default: null
+          title: Givenname2
+        givenName3:
+          anyOf:
+          - maxLength: 20
+            type: string
+          - type: 'null'
+          default: null
+          title: Givenname3
+      required:
+      - familyName
+      - givenName1
+      title: PersonName
+      type: object
+    PrincipalPlaceOfBusiness:
+      additionalProperties: false
+      properties:
+        address:
+          $ref: '#/components/schemas/AuStreetAddress'
+      required:
+      - address
+      title: PrincipalPlaceOfBusiness
+      type: object
+    RegisteredOffice:
+      additionalProperties: false
+      description: Registered office address, occupier and opening hours.
+      properties:
+        address:
+          $ref: '#/components/schemas/AuStreetAddress'
+        occupyIndicator:
+          description: Will the new company itself occupy the premises?
+          title: Occupyindicator
+          type: boolean
+        occupierName:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when occupyIndicator is false
+          title: Occupiername
+        occupierConsent:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: Required when occupyIndicator is false; must be true
+          title: Occupierconsent
+        openStandardHoursIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: Required for APUB companies
+          title: Openstandardhoursindicator
+        openHours:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/OpenHours'
+            type: array
+          - type: 'null'
+          default: null
+          description: Required when openStandardHoursIndicator is false
+          title: Openhours
+      required:
+      - address
+      - occupyIndicator
+      title: RegisteredOffice
+      type: object
+    ShareAllocation:
+      additionalProperties: false
+      description: Shares taken up by one holding (one or more joint holders) in one class.
+      properties:
+        classCode:
+          description: Must match a shareStructure classCode
+          maxLength: 4
+          title: Classcode
+          type: string
+        numberIssued:
+          description: Number of shares in this holding
+          minimum: 1
+          title: Numberissued
+          type: integer
+        fullyPaidIndicator:
+          title: Fullypaidindicator
+          type: boolean
+        totalAmountPaid:
+          description: Cents-style integer, see ShareStructure
+          minimum: 0
+          title: Totalamountpaid
+          type: integer
+        totalAmountUnpaid:
+          minimum: 0
+          title: Totalamountunpaid
+          type: integer
+        amountPaidPerShare:
+          minimum: 0
+          title: Amountpaidpershare
+          type: integer
+        amountUnpaidPerShare:
+          minimum: 0
+          title: Amountunpaidpershare
+          type: integer
+        beneficialOwnerIndicator:
+          description: Are the holders the beneficial owners?
+          title: Beneficialownerindicator
+          type: boolean
+        beneficialOwner:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when beneficialOwnerIndicator is false
+          title: Beneficialowner
+        holdingOwners:
+          items:
+            $ref: '#/components/schemas/Party'
+          minItems: 1
+          title: Holdingowners
+          type: array
+      required:
+      - classCode
+      - numberIssued
+      - fullyPaidIndicator
+      - totalAmountPaid
+      - totalAmountUnpaid
+      - amountPaidPerShare
+      - amountUnpaidPerShare
+      - beneficialOwnerIndicator
+      - holdingOwners
+      title: ShareAllocation
+      type: object
+    ShareStructure:
+      additionalProperties: false
+      description: 'One share class. Money fields are integers whose last two digits are cents (100 = $1.00) per the
+
+        vendor''s validation rules — the vendor''s own sample payload is ambiguous on this, so confirm in the sandbox.'
+      properties:
+        classCode:
+          description: e.g. ORD
+          maxLength: 4
+          title: Classcode
+          type: string
+        classTitle:
+          description: e.g. ORDINARY
+          maxLength: 60
+          title: Classtitle
+          type: string
+        numberIssued:
+          minimum: 1
+          title: Numberissued
+          type: integer
+        totalAmountPaid:
+          minimum: 0
+          title: Totalamountpaid
+          type: integer
+        totalAmountUnpaid:
+          minimum: 0
+          title: Totalamountunpaid
+          type: integer
+      required:
+      - classCode
+      - classTitle
+      - numberIssued
+      - totalAmountPaid
+      - totalAmountUnpaid
+      title: ShareStructure
+      type: object
+    UltimateHoldingCompany:
+      additionalProperties: false
+      properties:
+        name:
+          maxLength: 200
+          title: Name
+          type: string
+        acn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Required when country is AU
+          title: Acn
+        abn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Abn
+        country:
+          description: ISO alpha-2 code preferred (NZ); the vendor sample uses a name (NEW ZEALAND)
+          maxLength: 60
+          minLength: 2
+          title: Country
+          type: string
+      required:
+      - name
+      - country
+      title: UltimateHoldingCompany
+      type: object
+    CompanyRegistrationRequest:
+      additionalProperties: false
+      description: ASIC Form 201 — register a new Australian company. POST /company-registrations.
+      properties:
+        generalInformation:
+          $ref: '#/components/schemas/GeneralInformation'
+        nameReserved:
+          anyOf:
+          - $ref: '#/components/schemas/NameReserved'
+          - type: 'null'
+          default: null
+          description: Required when generalInformation.nameReservedIndicator is true
+        nameIdentical:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/NameIdentical'
+            type: array
+          - type: 'null'
+          default: null
+          description: State registrations of the identical business name (when no nameIdenticalAbn)
+          title: Nameidentical
+        registeredOffice:
+          $ref: '#/components/schemas/RegisteredOffice'
+        principalPlaceOfBusiness:
+          $ref: '#/components/schemas/PrincipalPlaceOfBusiness'
+        ultimateHoldingCompany:
+          anyOf:
+          - $ref: '#/components/schemas/UltimateHoldingCompany'
+          - type: 'null'
+          default: null
+        officeHolders:
+          items:
+            $ref: '#/components/schemas/OfficeHolder'
+          minItems: 1
+          title: Officeholders
+          type: array
+        shareStructure:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ShareStructure'
+            type: array
+          - type: 'null'
+          default: null
+          description: Required unless companyClass is LMGT
+          title: Sharestructure
+        shareAllocation:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ShareAllocation'
+            type: array
+          - type: 'null'
+          default: null
+          description: Required unless companyClass is LMGT
+          title: Shareallocation
+        nonShareMembersAmount:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          description: Members' guarantee amount (cents-style); required for LMGT
+          title: Nonsharemembersamount
+        nonShareMembers:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Party'
+            type: array
+          - type: 'null'
+          default: null
+          description: Required for LMGT
+          title: Nonsharemembers
+        applicant:
+          $ref: '#/components/schemas/Applicant'
+        admin:
+          $ref: '#/components/schemas/Admin'
+      required:
+      - generalInformation
+      - registeredOffice
+      - principalPlaceOfBusiness
+      - officeHolders
+      - applicant
+      - admin
+      title: CompanyRegistrationRequest
+      type: object
+    AbnApplicant:
+      additionalProperties: true
+      description: Exactly one of individual (sole trader) or organisation (everything else).
+      properties:
+        individual:
+          anyOf:
+          - $ref: '#/components/schemas/AbnIndividual'
+          - type: 'null'
+          default: null
+        organisation:
+          anyOf:
+          - $ref: '#/components/schemas/AbnOrganisation'
+          - type: 'null'
+          default: null
+        tfn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Applicant's existing TFN, digits only; send it when applicationDetail.tfnIndicator is true
+          title: Tfn
+      title: AbnApplicant
+      type: object
+    AbnIndividual:
+      additionalProperties: true
+      description: The sole-trader applicant. Residential address fields are checked by Business API but not sent to the ATO.
+      properties:
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Mr, Mrs, Ms, Dr …
+          title: Title
+        familyName:
+          title: Familyname
+          type: string
+        givenName:
+          title: Givenname
+          type: string
+        otherGivenName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Othergivenname
+        dateOfBirth:
+          format: date
+          title: Dateofbirth
+          type: string
+        genderCode:
+          anyOf:
+          - enum:
+            - '0'
+            - '1'
+            - '2'
+            - '3'
+            type: string
+          - type: 'null'
+          default: null
+          title: Gendercode
+        line2:
+          anyOf:
+          - maxLength: 38
+            type: string
+          - type: 'null'
+          default: null
+          title: Line2
+        street:
+          anyOf:
+          - maxLength: 38
+            type: string
+          - type: 'null'
+          default: null
+          description: Residential street (required when no tfn)
+          title: Street
+        locality:
+          anyOf:
+          - maxLength: 46
+            type: string
+          - type: 'null'
+          default: null
+          title: Locality
+        state:
+          anyOf:
+          - enum:
+            - ACT
+            - NSW
+            - NT
+            - QLD
+            - SA
+            - TAS
+            - VIC
+            - WA
+            type: string
+          - type: 'null'
+          default: null
+          title: State
+        postcode:
+          anyOf:
+          - pattern: ^\d{4}$
+            type: string
+          - type: 'null'
+          default: null
+          title: Postcode
+        countryCode:
+          anyOf:
+          - maxLength: 2
+            minLength: 2
+            type: string
+          - type: 'null'
+          default: null
+          title: Countrycode
+      required:
+      - familyName
+      - givenName
+      - dateOfBirth
+      title: AbnIndividual
+      type: object
+    AbnOrganisation:
+      additionalProperties: true
+      properties:
+        name:
+          description: Legal name of the company / partnership / trust / fund
+          title: Name
+          type: string
+        acn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Required for sub-types 027 and 032 (the company must already exist)
+          title: Acn
+      required:
+      - name
+      title: AbnOrganisation
+      type: object
+    ApplicationDetail:
+      additionalProperties: true
+      properties:
+        tfnIndicator:
+          description: Does the applicant already have a TFN? (then send applicant.tfn)
+          title: Tfnindicator
+          type: boolean
+        abnApplicationIndicator:
+          default: true
+          description: Applying for an ABN (always true here)
+          title: Abnapplicationindicator
+          type: boolean
+        tfnApplicationIndicator:
+          default: false
+          description: Also issue a TFN (companies, partnerships, trusts only — never sole traders)
+          title: Tfnapplicationindicator
+          type: boolean
+      required:
+      - tfnIndicator
+      title: ApplicationDetail
+      type: object
+    ApplicationReason:
+      additionalProperties: true
+      properties:
+        code:
+          enum:
+          - CBS
+          - CON
+          - INV
+          - NEW
+          - OTH
+          - PAY
+          - PUR
+          - RER
+          - RED
+          title: Code
+          type: string
+        firstTimeDirectorIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Firsttimedirectorindicator
+        firstTimeSelfEmployedIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Firsttimeselfemployedindicator
+      required:
+      - code
+      title: ApplicationReason
+      type: object
+    Associates:
+      additionalProperties: true
+      properties:
+        individuals:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/IndividualAssociate'
+            type: array
+          - type: 'null'
+          default: null
+          title: Individuals
+        organisations:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/OrganisationAssociate'
+            type: array
+          - type: 'null'
+          default: null
+          title: Organisations
+        other:
+          anyOf:
+          - $ref: '#/components/schemas/AssociatesOther'
+          - type: 'null'
+          default: null
+      title: Associates
+      type: object
+    AssociatesOther:
+      additionalProperties: true
+      properties:
+        legalRepresentativeIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Legalrepresentativeindicator
+      title: AssociatesOther
+      type: object
+    AtoAddress:
+      additionalProperties: true
+      description: 'ATO address: street/line2 ≤ 38 chars, locality ≤ 46. Australian addresses need locality, state, postcode.'
+      properties:
+        line2:
+          anyOf:
+          - maxLength: 38
+            type: string
+          - type: 'null'
+          default: null
+          description: Unit / level / building
+          title: Line2
+        street:
+          description: Street number and name
+          maxLength: 38
+          title: Street
+          type: string
+        locality:
+          anyOf:
+          - maxLength: 46
+            type: string
+          - type: 'null'
+          default: null
+          title: Locality
+        state:
+          anyOf:
+          - enum:
+            - ACT
+            - NSW
+            - NT
+            - QLD
+            - SA
+            - TAS
+            - VIC
+            - WA
+            type: string
+          - type: 'null'
+          default: null
+          title: State
+        postcode:
+          anyOf:
+          - pattern: ^\d{4}$
+            type: string
+          - type: 'null'
+          default: null
+          title: Postcode
+        countryCode:
+          default: AU
+          description: ISO alpha-2, e.g. AU
+          maxLength: 2
+          minLength: 2
+          title: Countrycode
+          type: string
+      required:
+      - street
+      title: AtoAddress
+      type: object
+    AuthorisedContact:
+      additionalProperties: true
+      properties:
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Title
+        familyName:
+          title: Familyname
+          type: string
+        givenName:
+          title: Givenname
+          type: string
+        otherGivenName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Othergivenname
+        positionHeld:
+          description: Free text
+          maxLength: 50
+          title: Positionheld
+          type: string
+        email:
+          title: Email
+          type: string
+        phone:
+          title: Phone
+          type: string
+        preferredLanguageCode:
+          anyOf:
+          - enum:
+            - ARA
+            - ASS
+            - CHI
+            - CRO
+            - DAR
+            - DIN
+            - ENG
+            - FAR
+            - GRK
+            - HIN
+            - IND
+            - ITA
+            - JAP
+            - KAR
+            - KHM
+            - KOR
+            - MAC
+            - MLT
+            - BLK
+            - OTH
+            - POL
+            - POR
+            - RUS
+            - SRB
+            - SOM
+            - SPA
+            - TTY
+            - THA
+            - TUR
+            - VNM
+            type: string
+          - type: 'null'
+          default: null
+          title: Preferredlanguagecode
+        preferredLanguageOther:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Preferredlanguageother
+      required:
+      - familyName
+      - givenName
+      - positionHeld
+      - email
+      - phone
+      title: AuthorisedContact
+      type: object
+    BusinessActivity:
+      additionalProperties: true
+      properties:
+        code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Main business activity (ANZSIC-style) code, e.g. 7749; use GET /helpers/business-industries
+          title: Code
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Description matching the code
+          title: Description
+        abnStartDate:
+          description: After 1999-01-01, at most 6 months ahead; not in the future if the applicant has held an ABN before
+          format: date
+          title: Abnstartdate
+          type: string
+        abnEndDate:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          default: null
+          title: Abnenddate
+        governmentIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: Government entity? Required for every entity except sole traders
+          title: Governmentindicator
+        agriculturalIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Agriculturalindicator
+      required:
+      - abnStartDate
+      title: BusinessActivity
+      type: object
+    Declaration:
+      additionalProperties: true
+      properties:
+        fullName:
+          title: Fullname
+          type: string
+        positionHeld:
+          description: Free text, e.g. Owner, Director, Tax Agent
+          maxLength: 50
+          title: Positionheld
+          type: string
+        phone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Phone
+        date:
+          format: date
+          title: Date
+          type: string
+        signatureAcceptanceIndicator:
+          description: Must be true
+          title: Signatureacceptanceindicator
+          type: boolean
+        signatureText:
+          title: Signaturetext
+          type: string
+      required:
+      - fullName
+      - positionHeld
+      - date
+      - signatureAcceptanceIndicator
+      - signatureText
+      title: Declaration
+      type: object
+    Entitlement:
+      additionalProperties: true
+      description: The ABN entitlement questionnaire the applicant completed (get questions from GET /helpers/entitlement-questionnaire).
+      properties:
+        firstQuestion:
+          title: Firstquestion
+          type: integer
+        outcomeId:
+          title: Outcomeid
+          type: integer
+        outcome:
+          description: true = entitled to an ABN
+          title: Outcome
+          type: boolean
+        questionnaire:
+          items:
+            $ref: '#/components/schemas/EntitlementAnswer'
+          minItems: 1
+          title: Questionnaire
+          type: array
+      required:
+      - firstQuestion
+      - outcomeId
+      - outcome
+      - questionnaire
+      title: Entitlement
+      type: object
+    EntitlementAnswer:
+      additionalProperties: true
+      properties:
+        questionId:
+          title: Questionid
+          type: integer
+        answerId:
+          title: Answerid
+          type: integer
+        nextQuestionId:
+          description: 0 on the last answer
+          title: Nextquestionid
+          type: integer
+        outcomeId:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Outcomeid
+      required:
+      - questionId
+      - answerId
+      - nextQuestionId
+      title: EntitlementAnswer
+      type: object
+    GstRegistration:
+      additionalProperties: true
+      properties:
+        registrationStartDate:
+          description: On/after abnStartDate, at most 6 months ahead
+          format: date
+          title: Registrationstartdate
+          type: string
+        turnoverRangeCode:
+          enum:
+          - $0 - $74,999
+          - $75,000 - $149,999
+          - $150,000 - $1,999,999
+          - $2,000,000 - $9,999,999
+          - $10,000,000 - $19,999,999
+          - $20 million and over
+          title: Turnoverrangecode
+          type: string
+        lodgementFrequencyCode:
+          enum:
+          - Annually
+          - HalfYearly
+          - Monthly
+          - Quarterly
+          title: Lodgementfrequencycode
+          type: string
+        reasonCode:
+          enum:
+          - Legislative Requirement
+          - Voluntary
+          title: Reasoncode
+          type: string
+        cashAccountingIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Cashaccountingindicator
+        importIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Importindicator
+        accountName:
+          anyOf:
+          - maxLength: 32
+            type: string
+          - type: 'null'
+          default: null
+          title: Accountname
+      required:
+      - registrationStartDate
+      - turnoverRangeCode
+      - lodgementFrequencyCode
+      - reasonCode
+      title: GstRegistration
+      type: object
+    IndividualAssociate:
+      additionalProperties: true
+      description: A person associated with the entity (director, partner, trustee, member …). Needs a tfn and/or a street
+        address.
+      properties:
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Title
+        familyName:
+          title: Familyname
+          type: string
+        givenName:
+          title: Givenname
+          type: string
+        otherGivenName:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Othergivenname
+        dateOfBirth:
+          format: date
+          title: Dateofbirth
+          type: string
+        genderCode:
+          anyOf:
+          - enum:
+            - '0'
+            - '1'
+            - '2'
+            - '3'
+            type: string
+          - type: 'null'
+          default: null
+          title: Gendercode
+        positionHeld:
+          items:
+            enum:
+            - DIR
+            - DCT
+            - PTN
+            - MSF
+            - POF
+            - TRT
+            - TRB
+            - CSH
+            - CSY
+            - OFB
+            type: string
+          minItems: 1
+          title: Positionheld
+          type: array
+        tfn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tfn
+        line2:
+          anyOf:
+          - maxLength: 38
+            type: string
+          - type: 'null'
+          default: null
+          title: Line2
+        street:
+          anyOf:
+          - maxLength: 38
+            type: string
+          - type: 'null'
+          default: null
+          title: Street
+        locality:
+          anyOf:
+          - maxLength: 46
+            type: string
+          - type: 'null'
+          default: null
+          title: Locality
+        state:
+          anyOf:
+          - enum:
+            - ACT
+            - NSW
+            - NT
+            - QLD
+            - SA
+            - TAS
+            - VIC
+            - WA
+            type: string
+          - type: 'null'
+          default: null
+          title: State
+        postcode:
+          anyOf:
+          - pattern: ^\d{4}$
+            type: string
+          - type: 'null'
+          default: null
+          title: Postcode
+        countryCode:
+          anyOf:
+          - maxLength: 2
+            minLength: 2
+            type: string
+          - type: 'null'
+          default: null
+          title: Countrycode
+      required:
+      - familyName
+      - givenName
+      - dateOfBirth
+      - positionHeld
+      title: IndividualAssociate
+      type: object
+    LctRegistration:
+      additionalProperties: true
+      properties:
+        liabilityRangeCode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: $0 to $49,999 · $50,000 to $99,999 · $100,000 to $499,999 · $500,000 to $5 million · More than $5 million
+          title: Liabilityrangecode
+        activityCode:
+          anyOf:
+          - enum:
+            - Importer
+            - Manufacturer
+            - Retailer
+            - Wholesaler
+            type: string
+          - type: 'null'
+          default: null
+          title: Activitycode
+      title: LctRegistration
+      type: object
+    MainAddresses:
+      additionalProperties: true
+      description: Business (physical, no PO box) and postal addresses plus contact details.
+      properties:
+        business:
+          $ref: '#/components/schemas/AtoAddress'
+          description: Physical business address; a sole trader working from home gives their home
+        postal:
+          anyOf:
+          - $ref: '#/components/schemas/AtoAddress'
+          - type: 'null'
+          default: null
+          description: May be a PO box
+        businessEmail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Businessemail
+        correspondenceEmail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Correspondenceemail
+        businessPhone:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Businessphone
+        sameMainBusinessActivityIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Samemainbusinessactivityindicator
+        businessActivityCode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Businessactivitycode
+        businessActivityDescription:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Businessactivitydescription
+        additionalBusinessLocationsIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Additionalbusinesslocationsindicator
+      required:
+      - business
+      title: MainAddresses
+      type: object
+    OrganisationAssociate:
+      additionalProperties: true
+      description: A company associated with the entity (corporate trustee, corporate partner, shareholder …).
+      properties:
+        name:
+          title: Name
+          type: string
+        acn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Acn
+        arbn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Arbn
+        abn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Abn
+        incorporationDate:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when no tfn is given
+          title: Incorporationdate
+        positionHeld:
+          items:
+            enum:
+            - DIR
+            - DCT
+            - PTN
+            - MSF
+            - POF
+            - TRT
+            - TRB
+            - CSH
+            - CSY
+            - OFB
+            type: string
+          minItems: 1
+          title: Positionheld
+          type: array
+        tfn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Tfn
+        line2:
+          anyOf:
+          - maxLength: 38
+            type: string
+          - type: 'null'
+          default: null
+          title: Line2
+        street:
+          anyOf:
+          - maxLength: 38
+            type: string
+          - type: 'null'
+          default: null
+          title: Street
+        locality:
+          anyOf:
+          - maxLength: 46
+            type: string
+          - type: 'null'
+          default: null
+          title: Locality
+        state:
+          anyOf:
+          - enum:
+            - ACT
+            - NSW
+            - NT
+            - QLD
+            - SA
+            - TAS
+            - VIC
+            - WA
+            type: string
+          - type: 'null'
+          default: null
+          title: State
+        postcode:
+          anyOf:
+          - pattern: ^\d{4}$
+            type: string
+          - type: 'null'
+          default: null
+          title: Postcode
+        countryCode:
+          anyOf:
+          - maxLength: 2
+            minLength: 2
+            type: string
+          - type: 'null'
+          default: null
+          title: Countrycode
+      required:
+      - name
+      - positionHeld
+      title: OrganisationAssociate
+      type: object
+    PaygwRegistration:
+      additionalProperties: true
+      properties:
+        lodgementChannelCode:
+          anyOf:
+          - enum:
+            - E
+            - EAS
+            - ECI
+            - ELS
+            - EML
+            - FDF
+            - INP
+            - MGV
+            - MIPS
+            - OTH
+            - P
+            - PE
+            - PH
+            - RDCC
+            - RO
+            - SBR
+            - SMS
+            - WEB
+            type: string
+          - type: 'null'
+          default: null
+          title: Lodgementchannelcode
+        paymentSummaryProvisionMethodCode:
+          anyOf:
+          - enum:
+            - ATO
+            - Both
+            - Print
+            type: string
+          - type: 'null'
+          default: null
+          title: Paymentsummaryprovisionmethodcode
+      title: PaygwRegistration
+      type: object
+    SuperFundFinancialDetails:
+      additionalProperties: true
+      properties:
+        electronicServiceAlias:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Electronicservicealias
+      title: SuperFundFinancialDetails
+      type: object
+    SuperFundNoticeOfElection:
+      additionalProperties: true
+      properties:
+        governingRulesIndicator:
+          title: Governingrulesindicator
+          type: boolean
+        regulatoryElectionDate:
+          description: Not in the future
+          format: date
+          title: Regulatoryelectiondate
+          type: string
+        agePensionFundIndicator:
+          title: Agepensionfundindicator
+          type: boolean
+      required:
+      - governingRulesIndicator
+      - regulatoryElectionDate
+      - agePensionFundIndicator
+      title: SuperFundNoticeOfElection
+      type: object
+    SuperFundTrusteeDisclosure:
+      additionalProperties: true
+      description: Answer the set matching the trustee type (corporate vs individual); extra answers are harmless.
+      properties:
+        smsf12MonthsActivityIndicator:
+          title: Smsf12Monthsactivityindicator
+          type: boolean
+        liquidatorAppointedIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Liquidatorappointedindicator
+        disqualifiedOfficerIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Disqualifiedofficerindicator
+        receiverAppointedIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Receiverappointedindicator
+        operationCeaseIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Operationceaseindicator
+        underOfficialManagementIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Underofficialmanagementindicator
+        trusteesBankruptIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Trusteesbankruptindicator
+        civilPenaltyOrderIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Civilpenaltyorderindicator
+        convictionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Convictionindicator
+        disqualifiedTrusteesOrDirectorsIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Disqualifiedtrusteesordirectorsindicator
+      required:
+      - smsf12MonthsActivityIndicator
+      title: SuperFundTrusteeDisclosure
+      type: object
+    TaxRegistrations:
+      additionalProperties: false
+      description: Only gst, ftc, lct, wet, paygw and fbt are accepted (PAYG withholding is paygw, not payg).
+      properties:
+        gst:
+          anyOf:
+          - $ref: '#/components/schemas/GstRegistration'
+          - type: 'null'
+          default: null
+        paygw:
+          anyOf:
+          - $ref: '#/components/schemas/PaygwRegistration'
+          - type: 'null'
+          default: null
+        fbt:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          default: null
+          title: Fbt
+        ftc:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          default: null
+          title: Ftc
+        lct:
+          anyOf:
+          - $ref: '#/components/schemas/LctRegistration'
+          - type: 'null'
+          default: null
+        wet:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          default: null
+          title: Wet
+      title: TaxRegistrations
+      type: object
+    TaxationInformation:
+      additionalProperties: true
+      properties:
+        nonprofitIndicator:
+          title: Nonprofitindicator
+          type: boolean
+        incomeTaxExemptionIndicator:
+          title: Incometaxexemptionindicator
+          type: boolean
+        australianResidentIndicator:
+          description: false puts an applicant without a TFN on a 43-day proof-of-identity hold
+          title: Australianresidentindicator
+          type: boolean
+        taxAgentIdentifier:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Registered tax agent number, if lodged by an agent
+          title: Taxagentidentifier
+        superBenefitMembers:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          description: 'SMSF: number of members'
+          title: Superbenefitmembers
+        superCode:
+          anyOf:
+          - enum:
+            - A
+            - D
+            - U
+            - E
+            type: string
+          - type: 'null'
+          default: null
+          description: SMSF benefit structure (A accumulation …)
+          title: Supercode
+      required:
+      - nonprofitIndicator
+      - incomeTaxExemptionIndicator
+      - australianResidentIndicator
+      title: TaxationInformation
+      type: object
+    AbnRegistrationRequest:
+      additionalProperties: false
+      description: 'ATO ABNREG — apply for an Australian Business Number. POST /abn-registrations.
+
+        testTransmissionIndicator is NOT a field here: the server sets it from its environment.'
+      properties:
+        entityType:
+          enum:
+          - '051'
+          - '117'
+          - '161'
+          - '210'
+          - '212'
+          title: Entitytype
+          type: string
+        entitySubType:
+          enum:
+          - '006'
+          - 009
+          - '020'
+          - '021'
+          - '022'
+          - '027'
+          - '032'
+          - 039
+          - '045'
+          - '054'
+          - 059
+          - '071'
+          - '072'
+          - '077'
+          - 087
+          - 088
+          - 089
+          - 090
+          - '112'
+          - '120'
+          - '138'
+          - '145'
+          - '150'
+          - '156'
+          - '168'
+          - '174'
+          - '179'
+          - '184'
+          - '196'
+          - '205'
+          - '221'
+          title: Entitysubtype
+          type: string
+        entitySubTypeAdditional:
+          anyOf:
+          - enum:
+            - UPC
+            - CLP
+            - CHT
+            - LBG
+            type: string
+          - type: 'null'
+          default: null
+          title: Entitysubtypeadditional
+        entitlement:
+          $ref: '#/components/schemas/Entitlement'
+        applicant:
+          $ref: '#/components/schemas/AbnApplicant'
+        applicationDetail:
+          $ref: '#/components/schemas/ApplicationDetail'
+        applicationReason:
+          $ref: '#/components/schemas/ApplicationReason'
+        businessActivity:
+          $ref: '#/components/schemas/BusinessActivity'
+        mainAddresses:
+          $ref: '#/components/schemas/MainAddresses'
+        additionalAddresses:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/AtoAddress'
+            type: array
+          - type: 'null'
+          default: null
+          title: Additionaladdresses
+        taxationInformation:
+          $ref: '#/components/schemas/TaxationInformation'
+        associates:
+          anyOf:
+          - $ref: '#/components/schemas/Associates'
+          - type: 'null'
+          default: null
+          description: Required for every entity except a sole trader
+        taxRegistrations:
+          anyOf:
+          - $ref: '#/components/schemas/TaxRegistrations'
+          - type: 'null'
+          default: null
+        superFundNoticeOfElection:
+          anyOf:
+          - $ref: '#/components/schemas/SuperFundNoticeOfElection'
+          - type: 'null'
+          default: null
+          description: Required for SMSF (sub-type 196)
+        superFundTrusteeDisclosure:
+          anyOf:
+          - $ref: '#/components/schemas/SuperFundTrusteeDisclosure'
+          - type: 'null'
+          default: null
+          description: Required for SMSF (sub-type 196)
+        superFundFinancialDetails:
+          anyOf:
+          - $ref: '#/components/schemas/SuperFundFinancialDetails'
+          - type: 'null'
+          default: null
+        authorisedContacts:
+          items:
+            $ref: '#/components/schemas/AuthorisedContact'
+          minItems: 1
+          title: Authorisedcontacts
+          type: array
+        declaration:
+          $ref: '#/components/schemas/Declaration'
+        testTransmissionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Ignored: the server sets it from BAPI_ENV'
+          title: Testtransmissionindicator
+      required:
+      - entityType
+      - entitySubType
+      - entitlement
+      - applicant
+      - applicationDetail
+      - applicationReason
+      - businessActivity
+      - mainAddresses
+      - taxationInformation
+      - authorisedContacts
+      - declaration
+      title: AbnRegistrationRequest
+      type: object
+    BnBirthDetails:
+      additionalProperties: false
+      properties:
+        date:
+          format: date
+          title: Date
+          type: string
+        cityTown:
+          title: Citytown
+          type: string
+        state:
+          anyOf:
+          - enum:
+            - ACT
+            - NSW
+            - NT
+            - QLD
+            - SA
+            - TAS
+            - VIC
+            - WA
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when born in Australia
+          title: State
+        countryOfBirth:
+          description: ISO alpha-2
+          maxLength: 2
+          minLength: 2
+          title: Countryofbirth
+          type: string
+      required:
+      - date
+      - cityTown
+      - countryOfBirth
+      title: BnBirthDetails
+      type: object
+    BnEntity:
+      additionalProperties: false
+      description: The holder of the business name.
+      properties:
+        type:
+          enum:
+          - IND
+          - IB
+          - PTSH
+          - USTR
+          - JV
+          title: Type
+          type: string
+        subType:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Holder's ABR entity-type code — required for IB, PTSH, USTR (PRV, PUB, FPT, PTR, DTT, DIT, FUT …)
+          title: Subtype
+        abn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Holder's ABN — required for every type except JV
+          title: Abn
+        individual:
+          anyOf:
+          - $ref: '#/components/schemas/BnIndividual'
+          - type: 'null'
+          default: null
+          description: IND only
+        organisation:
+          anyOf:
+          - $ref: '#/components/schemas/BnOrganisation'
+          - type: 'null'
+          default: null
+          description: 'IB / PTSH / USTR / JV: legal name (+ acn for IB)'
+        partners:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/BnParty'
+            type: array
+          - type: 'null'
+          default: null
+          description: PTSH only
+          title: Partners
+        trustees:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/BnParty'
+            type: array
+          - type: 'null'
+          default: null
+          description: USTR only
+          title: Trustees
+        associates:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/BnParty'
+            type: array
+          - type: 'null'
+          default: null
+          description: JV only; each needs its own abn
+          title: Associates
+      required:
+      - type
+      title: BnEntity
+      type: object
+    BnGeneralInformation:
+      additionalProperties: false
+      properties:
+        businessName:
+          description: Proposed business (trading) name; check availability first
+          title: Businessname
+          type: string
+        term:
+          description: 'Registration period in years: 1 or 3'
+          title: Term
+          type: integer
+        paymentMethod:
+          description: card = ASIC online payment link returned via status (instant); invoice = ASIC emails an invoice (pay
+            within 10 days)
+          enum:
+          - card
+          - invoice
+          title: Paymentmethod
+          type: string
+        email:
+          description: Contact email for the application
+          title: Email
+          type: string
+      required:
+      - businessName
+      - term
+      - paymentMethod
+      - email
+      title: BnGeneralInformation
+      type: object
+    BnIndividual:
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/BnName'
+        birthDetails:
+          $ref: '#/components/schemas/BnBirthDetails'
+        address:
+          $ref: '#/components/schemas/BnStreetAddress'
+        abn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Joint-venture associates need their own ABN
+          title: Abn
+      required:
+      - name
+      - birthDetails
+      - address
+      title: BnIndividual
+      type: object
+    BnName:
+      additionalProperties: false
+      properties:
+        familyName:
+          title: Familyname
+          type: string
+        givenNames:
+          description: All given names, space separated
+          title: Givennames
+          type: string
+        otherGivenNames:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Othergivennames
+      required:
+      - familyName
+      - givenNames
+      title: BnName
+      type: object
+    BnOrganisation:
+      additionalProperties: false
+      properties:
+        name:
+          title: Name
+          type: string
+        acn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Required for the IB holder and for company partners/trustees
+          title: Acn
+        abn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Joint-venture associates need their own ABN
+          title: Abn
+      required:
+      - name
+      title: BnOrganisation
+      type: object
+    BnParty:
+      additionalProperties: false
+      description: 'A partner / trustee / JV associate: exactly one of individual or organisation.'
+      properties:
+        individual:
+          anyOf:
+          - $ref: '#/components/schemas/BnIndividual'
+          - type: 'null'
+          default: null
+        organisation:
+          anyOf:
+          - $ref: '#/components/schemas/BnOrganisation'
+          - type: 'null'
+          default: null
+      title: BnParty
+      type: object
+    BnPostalAddress:
+      additionalProperties: false
+      description: PO box style address (allowed for serviceAddress only).
+      properties:
+        postalType:
+          description: e.g. "PO BOX", "GPO BOX", "LOCKED BAG"
+          title: Postaltype
+          type: string
+        postalNumber:
+          title: Postalnumber
+          type: string
+        locality:
+          title: Locality
+          type: string
+        state:
+          enum:
+          - ACT
+          - NSW
+          - NT
+          - QLD
+          - SA
+          - TAS
+          - VIC
+          - WA
+          title: State
+          type: string
+        postCode:
+          pattern: ^\d{4}$
+          title: Postcode
+          type: string
+      required:
+      - postalType
+      - postalNumber
+      - locality
+      - state
+      - postCode
+      title: BnPostalAddress
+      type: object
+    BnSignatory:
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/BnName'
+        declaresTrueAndCorrectIndicator:
+          description: Must be true
+          title: Declarestrueandcorrectindicator
+          type: boolean
+      required:
+      - name
+      - declaresTrueAndCorrectIndicator
+      title: BnSignatory
+      type: object
+    BnStreetAddress:
+      additionalProperties: false
+      description: Structured street address used by the business names register.
+      properties:
+        unitOrOfficeNumber:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Unitorofficenumber
+        streetNumber:
+          title: Streetnumber
+          type: string
+        streetName:
+          description: Street name WITHOUT the type, e.g. "EXAMPLE"
+          title: Streetname
+          type: string
+        streetType:
+          description: e.g. STREET, ST, ROAD, RD, AVENUE
+          title: Streettype
+          type: string
+        locality:
+          title: Locality
+          type: string
+        state:
+          enum:
+          - ACT
+          - NSW
+          - NT
+          - QLD
+          - SA
+          - TAS
+          - VIC
+          - WA
+          title: State
+          type: string
+        postCode:
+          pattern: ^\d{4}$
+          title: Postcode
+          type: string
+        country:
+          anyOf:
+          - maxLength: 2
+            minLength: 2
+            type: string
+          - type: 'null'
+          default: null
+          description: ISO alpha-2, default AU
+          title: Country
+      required:
+      - streetNumber
+      - streetName
+      - streetType
+      - locality
+      - state
+      - postCode
+      title: BnStreetAddress
+      type: object
+    BusinessNameRegistrationRequest:
+      additionalProperties: false
+      description: 'ASIC BNREG — register a business (trading) name. POST /business-name-registrations.
+
+        testTransmissionIndicator is NOT a field here: the server sets it from its environment.'
+      properties:
+        generalInformation:
+          $ref: '#/components/schemas/BnGeneralInformation'
+        businessAddress:
+          $ref: '#/components/schemas/BnStreetAddress'
+          description: Principal place of business (street address)
+        serviceAddress:
+          anyOf:
+          - $ref: '#/components/schemas/BnStreetAddress'
+          - $ref: '#/components/schemas/BnPostalAddress'
+          description: Address for service of documents; may be a PO box
+          title: Serviceaddress
+        entity:
+          $ref: '#/components/schemas/BnEntity'
+        signatory:
+          $ref: '#/components/schemas/BnSignatory'
+        testTransmissionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Ignored: the server sets it from BAPI_ENV'
+          title: Testtransmissionindicator
+      required:
+      - generalInformation
+      - businessAddress
+      - serviceAddress
+      - entity
+      - signatory
+      title: BusinessNameRegistrationRequest
+      type: object
+    BnRenewalApplicant:
+      additionalProperties: false
+      properties:
+        individual:
+          $ref: '#/components/schemas/BnName'
+          description: Person lodging the renewal (familyName, givenNames)
+        declaresTrueAndCorrectIndicator:
+          description: Must be true
+          title: Declarestrueandcorrectindicator
+          type: boolean
+      required:
+      - individual
+      - declaresTrueAndCorrectIndicator
+      title: BnRenewalApplicant
+      type: object
+    BnRenewalGeneralInformation:
+      additionalProperties: false
+      properties:
+        businessName:
+          description: The registered business name, exactly as it appears on the register
+          title: Businessname
+          type: string
+        abn:
+          description: ABN of the business-name holder
+          title: Abn
+          type: string
+        term:
+          description: 'Renewal period in years: 1 or 3'
+          title: Term
+          type: integer
+        email:
+          description: Contact email for the renewal
+          title: Email
+          type: string
+      required:
+      - businessName
+      - abn
+      - term
+      - email
+      title: BnRenewalGeneralInformation
+      type: object
+    BusinessNameRenewalRequest:
+      additionalProperties: false
+      description: ASIC BNRENEW — renew an existing business name. POST /business-name-renewals.
+      properties:
+        generalInformation:
+          $ref: '#/components/schemas/BnRenewalGeneralInformation'
+        applicant:
+          $ref: '#/components/schemas/BnRenewalApplicant'
+        testTransmissionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Ignored: the server sets it from BAPI_ENV'
+          title: Testtransmissionindicator
+      required:
+      - generalInformation
+      - applicant
+      title: BusinessNameRenewalRequest
+      type: object
+    Asic484Address:
+      additionalProperties: false
+      description: Officeholder / member address; may be overseas (then omit state and postcode).
+      properties:
+        careOf:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          title: Careof
+        line2:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          title: Line2
+        street:
+          maxLength: 52
+          title: Street
+          type: string
+        locality:
+          maxLength: 30
+          title: Locality
+          type: string
+        state:
+          anyOf:
+          - enum:
+            - ACT
+            - NSW
+            - NT
+            - QLD
+            - SA
+            - TAS
+            - VIC
+            - WA
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when country is AU (or omitted)
+          title: State
+        postcode:
+          anyOf:
+          - pattern: ^\d{4}$
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when country is AU (or omitted)
+          title: Postcode
+        country:
+          anyOf:
+          - maxLength: 2
+            minLength: 2
+            type: string
+          - type: 'null'
+          default: null
+          description: ISO 3166-1 alpha-2; omit or AU for Australia
+          title: Country
+      required:
+      - street
+      - locality
+      title: Asic484Address
+      type: object
+    Asic484Annexure:
+      additionalProperties: false
+      properties:
+        mark:
+          description: Annexure mark, e.g. "A"
+          maxLength: 2
+          title: Mark
+          type: string
+        type:
+          const: ALT
+          description: ALT = terms of appointment of alternate directors
+          title: Type
+          type: string
+        numberOfPages:
+          minimum: 1
+          title: Numberofpages
+          type: integer
+        text:
+          description: Printable ASCII plus line breaks
+          title: Text
+          type: string
+      required:
+      - mark
+      - type
+      - numberOfPages
+      - text
+      title: Asic484Annexure
+      type: object
+    Asic484AuAddress:
+      additionalProperties: false
+      description: Australian street address (registered office / principal place of business).
+      properties:
+        careOf:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          title: Careof
+        line2:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          title: Line2
+        street:
+          maxLength: 52
+          title: Street
+          type: string
+        locality:
+          maxLength: 30
+          title: Locality
+          type: string
+        state:
+          enum:
+          - ACT
+          - NSW
+          - NT
+          - QLD
+          - SA
+          - TAS
+          - VIC
+          - WA
+          title: State
+          type: string
+        postcode:
+          pattern: ^\d{4}$
+          title: Postcode
+          type: string
+      required:
+      - street
+      - locality
+      - state
+      - postcode
+      title: Asic484AuAddress
+      type: object
+    Asic484BirthDetails:
+      additionalProperties: false
+      properties:
+        date:
+          description: YYYY-MM-DD; officer must be 18+
+          format: date
+          title: Date
+          type: string
+        locality:
+          description: City/town of birth
+          maxLength: 30
+          title: Locality
+          type: string
+        localityQualifier:
+          description: Australian state code (VIC) or ISO alpha-2 country (GB) for overseas births
+          maxLength: 3
+          title: Localityqualifier
+          type: string
+      required:
+      - date
+      - locality
+      - localityQualifier
+      title: Asic484BirthDetails
+      type: object
+    Asic484ConcessionalFees:
+      additionalProperties: false
+      properties:
+        dateOfChange:
+          format: date
+          title: Dateofchange
+          type: string
+        hasCommencedSpecialPurposeCompanyIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Hascommencedspecialpurposecompanyindicator
+        hasCeasedToBeSpecialPurposeCompanyIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Hasceasedtobespecialpurposecompanyindicator
+        isHomeUnitCompanyIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Ishomeunitcompanyindicator
+        isSuperannuationTrusteeCompanyIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Issuperannuationtrusteecompanyindicator
+        isForCharitablePurposesIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Isforcharitablepurposesindicator
+      required:
+      - dateOfChange
+      title: Asic484ConcessionalFees
+      type: object
+    Asic484GeneralInformation:
+      additionalProperties: false
+      properties:
+        companyName:
+          description: Current registered company name
+          maxLength: 200
+          title: Companyname
+          type: string
+        acn:
+          description: 9-digit ACN of the company (checksum validated)
+          title: Acn
+          type: string
+        annualStatementResponseIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: true when lodged in response to the annual statement
+          title: Annualstatementresponseindicator
+      required:
+      - companyName
+      - acn
+      title: Asic484GeneralInformation
+      type: object
+    Asic484HoldingOwner:
+      additionalProperties: false
+      properties:
+        individual:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+        organisation:
+          anyOf:
+          - $ref: '#/components/schemas/OrganisationRef'
+          - type: 'null'
+          default: null
+        formerName:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+        formerNameOrganisation:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          default: null
+          title: Formernameorganisation
+        address:
+          $ref: '#/components/schemas/Asic484Address'
+        memberHasAcnIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Memberhasacnindicator
+        memberStatus:
+          anyOf:
+          - enum:
+            - AP
+            - CA
+            - CN
+            - CO
+            - CX
+            - 'NO'
+            type: string
+          - type: 'null'
+          default: null
+          description: AP new · CA address change · CN name change · CO unchanged · CX name+address change · NO ceased
+          title: Memberstatus
+        addressOverriddenIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Addressoverriddenindicator
+      required:
+      - address
+      title: Asic484HoldingOwner
+      type: object
+    Asic484Member:
+      additionalProperties: false
+      description: One holding (one or more joint holders) in one share class, as it stands after the change.
+      properties:
+        shareClass:
+          description: Must match a shareStructure classCode
+          maxLength: 4
+          title: Shareclass
+          type: string
+        number:
+          minimum: 0
+          title: Number
+          type: integer
+        sharesFullyPaidIndicator:
+          title: Sharesfullypaidindicator
+          type: boolean
+        beneficialOwnerIndicator:
+          title: Beneficialownerindicator
+          type: boolean
+        totalPaid:
+          minimum: 0
+          title: Totalpaid
+          type: integer
+        totalUnpaid:
+          minimum: 0
+          title: Totalunpaid
+          type: integer
+        increaseDecreaseInHolding:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          description: 'Signed: + increase, - decrease'
+          title: Increasedecreaseinholding
+        holdingStatus:
+          description: AP new holding · CD details changed · CO unchanged · NO ceased · TA/TR top-20 list adjustments
+          enum:
+          - AP
+          - CD
+          - CO
+          - 'NO'
+          - TA
+          - TR
+          title: Holdingstatus
+          type: string
+        dateOfChangeToRegister:
+          format: date
+          title: Dateofchangetoregister
+          type: string
+        dateMemberNameAddedToRegister:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          default: null
+          title: Datemembernameaddedtoregister
+        holdingOwners:
+          items:
+            $ref: '#/components/schemas/Asic484HoldingOwner'
+          minItems: 1
+          title: Holdingowners
+          type: array
+      required:
+      - shareClass
+      - number
+      - sharesFullyPaidIndicator
+      - beneficialOwnerIndicator
+      - totalPaid
+      - totalUnpaid
+      - holdingStatus
+      - dateOfChangeToRegister
+      - holdingOwners
+      title: Asic484Member
+      type: object
+    Asic484Office:
+      additionalProperties: false
+      properties:
+        office:
+          description: DIR, SEC or ALT
+          enum:
+          - DIR
+          - SEC
+          - ALT
+          title: Office
+          type: string
+        appointmentDate:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          default: null
+          title: Appointmentdate
+        cessationDate:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          default: null
+          title: Cessationdate
+        nameOfDirector:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+          description: 'ALT only: the director this person is alternate for'
+      required:
+      - office
+      title: Asic484Office
+      type: object
+    Asic484OfficeHolder:
+      additionalProperties: false
+      properties:
+        status:
+          description: AP appointed · NO ceased · CA/CN/CX continuing with address/name change · AC appointed and ceased
+          enum:
+          - AP
+          - 'NO'
+          - CA
+          - CN
+          - CX
+          - AC
+          title: Status
+          type: string
+        dateOfChange:
+          format: date
+          title: Dateofchange
+          type: string
+        name:
+          $ref: '#/components/schemas/PersonName'
+        formerName:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+        birthDetails:
+          $ref: '#/components/schemas/Asic484BirthDetails'
+        organisationName:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          default: null
+          description: When the officer is a body corporate
+          title: Organisationname
+        organisationAcn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Organisationacn
+        address:
+          $ref: '#/components/schemas/Asic484Address'
+          description: Residential address
+        addressOverriddenIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Addressoverriddenindicator
+        offices:
+          items:
+            $ref: '#/components/schemas/Asic484Office'
+          minItems: 1
+          title: Offices
+          type: array
+      required:
+      - status
+      - dateOfChange
+      - name
+      - birthDetails
+      - address
+      - offices
+      title: Asic484OfficeHolder
+      type: object
+    Asic484PrincipalPlaceOfBusiness:
+      additionalProperties: false
+      properties:
+        dateOfChange:
+          format: date
+          title: Dateofchange
+          type: string
+        address:
+          $ref: '#/components/schemas/Asic484AuAddress'
+        addressOverriddenIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Addressoverriddenindicator
+      required:
+      - dateOfChange
+      - address
+      title: Asic484PrincipalPlaceOfBusiness
+      type: object
+    Asic484RegisteredOffice:
+      additionalProperties: false
+      properties:
+        dateOfChange:
+          description: Date the change took effect (not in the future)
+          format: date
+          title: Dateofchange
+          type: string
+        address:
+          $ref: '#/components/schemas/Asic484AuAddress'
+        occupyIndicator:
+          description: Does the company occupy the premises?
+          title: Occupyindicator
+          type: boolean
+        occupierName:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when occupyIndicator is false
+          title: Occupiername
+        occupierConsent:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: Required when occupyIndicator is false
+          title: Occupierconsent
+        addressOverriddenIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Addressoverriddenindicator
+      required:
+      - dateOfChange
+      - address
+      - occupyIndicator
+      title: Asic484RegisteredOffice
+      type: object
+    Asic484ShareCancellation:
+      additionalProperties: false
+      properties:
+        earliestDateOfRegistrationOfCancellation:
+          format: date
+          title: Earliestdateofregistrationofcancellation
+          type: string
+        cancellationProvision:
+          description: ASIC Table 0021 code, e.g. S.254J-P, S.256A-S.256E-S, SS.257H(3)-M, S.258D, OTHER
+          maxLength: 60
+          title: Cancellationprovision
+          type: string
+        sectionReference:
+          anyOf:
+          - maxLength: 60
+            type: string
+          - type: 'null'
+          default: null
+          title: Sectionreference
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Description
+        shareClasses:
+          items:
+            $ref: '#/components/schemas/Asic484ShareCancellationClass'
+          minItems: 1
+          title: Shareclasses
+          type: array
+      required:
+      - earliestDateOfRegistrationOfCancellation
+      - cancellationProvision
+      - shareClasses
+      title: Asic484ShareCancellation
+      type: object
+    Asic484ShareCancellationClass:
+      additionalProperties: false
+      properties:
+        classCode:
+          maxLength: 4
+          title: Classcode
+          type: string
+        classTitle:
+          maxLength: 60
+          title: Classtitle
+          type: string
+        totalNumberCancelled:
+          minimum: 0
+          title: Totalnumbercancelled
+          type: integer
+        totalConsiderationPaid:
+          minimum: 0
+          title: Totalconsiderationpaid
+          type: integer
+      required:
+      - classCode
+      - classTitle
+      - totalNumberCancelled
+      - totalConsiderationPaid
+      title: Asic484ShareCancellationClass
+      type: object
+    Asic484ShareIssue:
+      additionalProperties: false
+      properties:
+        earliestDateOfIssue:
+          format: date
+          title: Earliestdateofissue
+          type: string
+        sharesIssuedForCashOnlyIndicator:
+          title: Sharesissuedforcashonlyindicator
+          type: boolean
+        sharesIssuedUnderWrittenContractIndicator:
+          title: Sharesissuedunderwrittencontractindicator
+          type: boolean
+        descriptionOfConsideration:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Required in practice when not cash-only; printable ASCII
+          title: Descriptionofconsideration
+        shareClasses:
+          items:
+            $ref: '#/components/schemas/Asic484ShareIssueClass'
+          minItems: 1
+          title: Shareclasses
+          type: array
+      required:
+      - earliestDateOfIssue
+      - sharesIssuedForCashOnlyIndicator
+      - sharesIssuedUnderWrittenContractIndicator
+      - shareClasses
+      title: Asic484ShareIssue
+      type: object
+    Asic484ShareIssueClass:
+      additionalProperties: false
+      properties:
+        classCode:
+          maxLength: 4
+          title: Classcode
+          type: string
+        classTitle:
+          maxLength: 60
+          title: Classtitle
+          type: string
+        totalNumberInIssue:
+          description: Number of shares issued in this transaction
+          minimum: 0
+          title: Totalnumberinissue
+          type: integer
+        amountPaid:
+          minimum: 0
+          title: Amountpaid
+          type: integer
+        amountDue:
+          minimum: 0
+          title: Amountdue
+          type: integer
+      required:
+      - classCode
+      - classTitle
+      - totalNumberInIssue
+      - amountPaid
+      - amountDue
+      title: Asic484ShareIssueClass
+      type: object
+    Asic484ShareStructure:
+      additionalProperties: false
+      description: A share class as it stands AFTER the change. Totals must equal the sum of the members rows for the class
+        (ASIC V455).
+      properties:
+        classCode:
+          description: e.g. ORD
+          maxLength: 4
+          title: Classcode
+          type: string
+        classTitle:
+          description: e.g. ORDINARY
+          maxLength: 60
+          title: Classtitle
+          type: string
+        numberIssued:
+          minimum: 0
+          title: Numberissued
+          type: integer
+        totalAmountPaid:
+          minimum: 0
+          title: Totalamountpaid
+          type: integer
+        totalAmountUnpaid:
+          minimum: 0
+          title: Totalamountunpaid
+          type: integer
+        status:
+          description: AP new class · DC details changed · NO whole class ceasing
+          enum:
+          - AP
+          - DC
+          - 'NO'
+          title: Status
+          type: string
+        earliestDateOfChange:
+          format: date
+          title: Earliestdateofchange
+          type: string
+      required:
+      - classCode
+      - classTitle
+      - numberIssued
+      - totalAmountPaid
+      - totalAmountUnpaid
+      - status
+      - earliestDateOfChange
+      title: Asic484ShareStructure
+      type: object
+    Asic484Signature:
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/PersonName'
+        role:
+          description: DIR, SEC or ALT (alternate director)
+          enum:
+          - DIR
+          - SEC
+          - ALT
+          title: Role
+          type: string
+        date:
+          description: YYYY-MM-DD; not in the future and not more than 6 months ago
+          format: date
+          title: Date
+          type: string
+        declaresTrueAndCorrectIndicator:
+          description: Must be true
+          title: Declarestrueandcorrectindicator
+          type: boolean
+      required:
+      - name
+      - role
+      - date
+      - declaresTrueAndCorrectIndicator
+      title: Asic484Signature
+      type: object
+    Asic484UltimateHoldingCompany:
+      additionalProperties: false
+      properties:
+        dateOfChange:
+          format: date
+          title: Dateofchange
+          type: string
+        uhcStatus:
+          description: A appointing · C ceasing · N notifying change
+          enum:
+          - A
+          - C
+          - N
+          title: Uhcstatus
+          type: string
+        name:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          default: null
+          title: Name
+        acn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Acn
+        abn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Abn
+        placeIncorporation:
+          anyOf:
+          - maxLength: 50
+            type: string
+          - type: 'null'
+          default: null
+          description: Place of incorporation for a foreign holding company
+          title: Placeincorporation
+      required:
+      - dateOfChange
+      - uhcStatus
+      title: Asic484UltimateHoldingCompany
+      type: object
+    Asic484FormRequest:
+      additionalProperties: false
+      description: 'ASIC Form 484 — Changes to Company Details. POST /asic-484-forms. Include only the sections that changed.
+
+        testTransmissionIndicator is NOT a field here: the server sets it from its environment.'
+      properties:
+        generalInformation:
+          $ref: '#/components/schemas/Asic484GeneralInformation'
+        signature:
+          $ref: '#/components/schemas/Asic484Signature'
+        registeredOffice:
+          anyOf:
+          - $ref: '#/components/schemas/Asic484RegisteredOffice'
+          - type: 'null'
+          default: null
+          description: Registered office address change
+        principalPlaceOfBusiness:
+          anyOf:
+          - $ref: '#/components/schemas/Asic484PrincipalPlaceOfBusiness'
+          - type: 'null'
+          default: null
+          description: Principal place of business change
+        ultimateHoldingCompany:
+          anyOf:
+          - $ref: '#/components/schemas/Asic484UltimateHoldingCompany'
+          - type: 'null'
+          default: null
+        officeHolders:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Asic484OfficeHolder'
+            type: array
+          - type: 'null'
+          default: null
+          description: Appointments, cessations, name/address changes
+          title: Officeholders
+        shareStructure:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Asic484ShareStructure'
+            type: array
+          - type: 'null'
+          default: null
+          description: Required with shareIssue / shareCancellation
+          title: Sharestructure
+        shareIssue:
+          anyOf:
+          - $ref: '#/components/schemas/Asic484ShareIssue'
+          - type: 'null'
+          default: null
+        shareCancellation:
+          anyOf:
+          - $ref: '#/components/schemas/Asic484ShareCancellation'
+          - type: 'null'
+          default: null
+        members:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Asic484Member'
+            type: array
+          - type: 'null'
+          default: null
+          description: Required with shareIssue / shareCancellation
+          title: Members
+        concessionalFees:
+          anyOf:
+          - $ref: '#/components/schemas/Asic484ConcessionalFees'
+          - type: 'null'
+          default: null
+        annexures:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Asic484Annexure'
+            type: array
+          - type: 'null'
+          default: null
+          title: Annexures
+        testTransmissionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Ignored: the server sets it from BAPI_ENV'
+          title: Testtransmissionindicator
+      required:
+      - generalInformation
+      - signature
+      title: Asic484FormRequest
+      type: object
+    MonitoredEntityInput:
+      additionalProperties: false
+      description: 'One entity to monitor: a company by ACN, an ABN holder by ABN, or both (the ABR must confirm they match).'
+      properties:
+        acn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: 9-digit ACN (companies are always keyed on their ACN)
+          title: Acn
+        abn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: 11-digit ABN
+          title: Abn
+        reference:
+          anyOf:
+          - maxLength: 100
+            type: string
+          - type: 'null'
+          default: null
+          description: Your own reference for this entity, e.g. a client id
+          title: Reference
+      title: MonitoredEntityInput
+      type: object
+    AsicSignatory:
+      additionalProperties: true
+      description: 'Who signs the form: an individual with an ASIC role code, the signing date and the declaration.'
+      properties:
+        individual:
+          $ref: '#/components/schemas/PersonName'
+        role:
+          description: Usually DIR or SEC for a company officer, AGT for the registered agent (Table 0011)
+          enum:
+          - ACC
+          - AGT
+          - APP
+          - DIR
+          - LEG
+          - LP
+          - REP
+          - SCP
+          - SEC
+          - SIG
+          - SUB
+          title: Role
+          type: string
+        dateSigned:
+          description: YYYY-MM-DD, not in the future
+          format: date
+          title: Datesigned
+          type: string
+        declaresTrueAndCorrectIndicator:
+          description: Must be true
+          title: Declarestrueandcorrectindicator
+          type: boolean
+      required:
+      - individual
+      - role
+      - dateSigned
+      - declaresTrueAndCorrectIndicator
+      title: AsicSignatory
+      type: object
+    CompanyNameChangeGeneralInformation:
+      additionalProperties: true
+      properties:
+        companyName:
+          description: Current registered company name
+          maxLength: 200
+          title: Companyname
+          type: string
+        acn:
+          description: 9-digit ACN (checksum validated)
+          title: Acn
+          type: string
+        companyType:
+          description: APTY for a Pty Ltd, APUB for a public company
+          enum:
+          - APUB
+          - APTY
+          - FNOS
+          - RACN
+          title: Companytype
+          type: string
+        proposedName:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          default: null
+          description: New name INCLUDING legal elements, e.g. "NEW NAME PTY LTD"; required unless acnNameIndicator is true
+          title: Proposedname
+        acnNameIndicator:
+          default: false
+          description: true = the new name is the ACN plus legal elements
+          title: Acnnameindicator
+          type: boolean
+        acnNameLegalElements:
+          anyOf:
+          - enum:
+            - PTY
+            - PTY.
+            - PROPRIETARY
+            - LTD
+            - LTD.
+            - LIMITED
+            - NL
+            - N.L.
+            - NO LIABILITY
+            type: string
+          - type: 'null'
+          default: null
+          description: Required when acnNameIndicator is true
+          title: Acnnamelegalelements
+        nameReservedIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: true if the new name was reserved with a Form 410 (then supply nameReserved)
+          title: Namereservedindicator
+        nameIdenticalIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: true if the new name is identical to an existing registered business name
+          title: Nameidenticalindicator
+        nameIdenticalAbn:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: ABN of the business-name holder when nameIdenticalIndicator is true
+          title: Nameidenticalabn
+        meetingDate:
+          description: Date of the members' meeting / special resolution (not in the future)
+          format: date
+          title: Meetingdate
+          type: string
+        meetingResolutionText:
+          description: Text of the special resolution, e.g. "THAT THE NAME OF THE COMPANY BE CHANGED TO NEW NAME PTY LTD"
+          title: Meetingresolutiontext
+          type: string
+        paymentMethod:
+          description: DDEB (agent's direct debit account) or INV (ASIC invoice)
+          enum:
+          - DDEB
+          - INV
+          title: Paymentmethod
+          type: string
+      required:
+      - companyName
+      - acn
+      - companyType
+      - meetingDate
+      - meetingResolutionText
+      - paymentMethod
+      title: CompanyNameChangeGeneralInformation
+      type: object
+    CompanyNameChangeRequest:
+      additionalProperties: false
+      description: 'ASIC Form 205A — change a registered company''s name. POST /company-name-changes.
+
+        testTransmissionIndicator is NOT a field here: the server sets it from its environment.'
+      properties:
+        generalInformation:
+          $ref: '#/components/schemas/CompanyNameChangeGeneralInformation'
+        nameReserved:
+          anyOf:
+          - $ref: '#/components/schemas/NameReserved'
+          - type: 'null'
+          default: null
+          description: Form 410 reservation details when nameReservedIndicator is true
+        signatory:
+          $ref: '#/components/schemas/AsicSignatory'
+        admin:
+          $ref: '#/components/schemas/Admin'
+        testTransmissionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Ignored: the server sets it from BAPI_ENV'
+          title: Testtransmissionindicator
+      required:
+      - generalInformation
+      - signatory
+      - admin
+      title: CompanyNameChangeRequest
+      type: object
+    DeregistrationApplicant:
+      additionalProperties: true
+      description: 'The applicant: the company itself (organisation + role of the officer applying) or an individual such
+        as a director or member.'
+      properties:
+        individual:
+          anyOf:
+          - $ref: '#/components/schemas/PersonName'
+          - type: 'null'
+          default: null
+        organisation:
+          anyOf:
+          - $ref: '#/components/schemas/OrganisationRef'
+          - type: 'null'
+          default: null
+        role:
+          anyOf:
+          - enum:
+            - ACC
+            - AGT
+            - APP
+            - DIR
+            - LEG
+            - LP
+            - REP
+            - SCP
+            - SEC
+            - SIG
+            - SUB
+            type: string
+          - type: 'null'
+          default: null
+          description: Applicant's role, e.g. DIR
+          title: Role
+        address:
+          anyOf:
+          - $ref: '#/components/schemas/Address'
+          - type: 'null'
+          default: null
+      title: DeregistrationApplicant
+      type: object
+    DeregistrationDeclarations:
+      additionalProperties: false
+      description: The six s.601AA conditions for voluntary deregistration. ASIC accepts the application only if ALL are true.
+      properties:
+        allMembersAgreeIndicator:
+          description: All members of the company agree to the deregistration
+          title: Allmembersagreeindicator
+          type: boolean
+        notCarryingOnBusinessIndicator:
+          description: The company is not carrying on business
+          title: Notcarryingonbusinessindicator
+          type: boolean
+        assetsLessThan1000Indicator:
+          description: The company's assets are worth less than $1,000
+          title: Assetslessthan1000Indicator
+          type: boolean
+        allFeesPaidIndicator:
+          description: All fees and penalties payable under the Corporations Act have been paid
+          title: Allfeespaidindicator
+          type: boolean
+        noOutstandingLiabilitiesIndicator:
+          description: The company has no outstanding liabilities
+          title: Nooutstandingliabilitiesindicator
+          type: boolean
+        notPartyToLegalProceedingsIndicator:
+          description: The company is not a party to any legal proceedings
+          title: Notpartytolegalproceedingsindicator
+          type: boolean
+      required:
+      - allMembersAgreeIndicator
+      - notCarryingOnBusinessIndicator
+      - assetsLessThan1000Indicator
+      - allFeesPaidIndicator
+      - noOutstandingLiabilitiesIndicator
+      - notPartyToLegalProceedingsIndicator
+      title: DeregistrationDeclarations
+      type: object
+    DeregistrationGeneral:
+      additionalProperties: true
+      properties:
+        companyName:
+          maxLength: 200
+          title: Companyname
+          type: string
+        acn:
+          description: 9-digit ACN (checksum validated)
+          title: Acn
+          type: string
+        paymentMethod:
+          description: DDEB (agent's direct debit) or INV (ASIC invoice) for the deregistration fee
+          enum:
+          - DDEB
+          - INV
+          title: Paymentmethod
+          type: string
+      required:
+      - companyName
+      - acn
+      - paymentMethod
+      title: DeregistrationGeneral
+      type: object
+    DeregistrationNominee:
+      additionalProperties: false
+      description: Person nominated to receive ASIC correspondence about the deregistration.
+      properties:
+        individual:
+          $ref: '#/components/schemas/PersonName'
+        address:
+          $ref: '#/components/schemas/Address'
+      required:
+      - individual
+      - address
+      title: DeregistrationNominee
+      type: object
+    CompanyDeregistrationRequest:
+      additionalProperties: false
+      description: 'ASIC Form 6010 — voluntary deregistration of a company. POST /company-deregistrations.
+
+        testTransmissionIndicator is NOT a field here: the server sets it from its environment.'
+      properties:
+        general:
+          $ref: '#/components/schemas/DeregistrationGeneral'
+        declarations:
+          $ref: '#/components/schemas/DeregistrationDeclarations'
+        applicant:
+          $ref: '#/components/schemas/DeregistrationApplicant'
+        nominee:
+          $ref: '#/components/schemas/DeregistrationNominee'
+        signatory:
+          $ref: '#/components/schemas/AsicSignatory'
+        testTransmissionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Ignored: the server sets it from BAPI_ENV'
+          title: Testtransmissionindicator
+      required:
+      - general
+      - declarations
+      - applicant
+      - nominee
+      - signatory
+      title: CompanyDeregistrationRequest
+      type: object
+    Asic361Signature:
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/PersonName'
+        role:
+          const: AGT
+          default: AGT
+          description: Signed by the registered agent (AGT)
+          title: Role
+          type: string
+        date:
+          description: YYYY-MM-DD, not in the future
+          format: date
+          title: Date
+          type: string
+        agentAuthorisedIndicator:
+          description: The agent is authorised to lodge; must be true
+          title: Agentauthorisedindicator
+          type: boolean
+        declaration:
+          description: Must be true
+          title: Declaration
+          type: boolean
+      required:
+      - name
+      - date
+      - agentAuthorisedIndicator
+      - declaration
+      title: Asic361Signature
+      type: object
+    AsicFormGeneralInformation:
+      additionalProperties: false
+      properties:
+        companyName:
+          maxLength: 200
+          title: Companyname
+          type: string
+        acn:
+          description: 9-digit ACN (checksum validated)
+          title: Acn
+          type: string
+      required:
+      - companyName
+      - acn
+      title: AsicFormGeneralInformation
+      type: object
+    Asic361FormRequest:
+      additionalProperties: false
+      description: ASIC Form 361 — notification by a registered agent that it ceases to act for a company. POST /asic-361-forms.
+      properties:
+        generalInformation:
+          $ref: '#/components/schemas/AsicFormGeneralInformation'
+        signature:
+          $ref: '#/components/schemas/Asic361Signature'
+        testTransmissionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Ignored: the server sets it from BAPI_ENV'
+          title: Testtransmissionindicator
+      required:
+      - generalInformation
+      - signature
+      title: Asic361FormRequest
+      type: object
+    Asic362GeneralInformation:
+      additionalProperties: false
+      properties:
+        companyName:
+          maxLength: 200
+          title: Companyname
+          type: string
+        acn:
+          description: 9-digit ACN (checksum validated)
+          title: Acn
+          type: string
+        type:
+          description: A = appoint your agent number for this company · C = cease the appointment
+          enum:
+          - A
+          - C
+          title: Type
+          type: string
+      required:
+      - companyName
+      - acn
+      - type
+      title: Asic362GeneralInformation
+      type: object
+    Asic362Signature:
+      additionalProperties: false
+      properties:
+        name:
+          $ref: '#/components/schemas/PersonName'
+        role:
+          description: Signed by an officer of the company (DIR or SEC)
+          enum:
+          - DIR
+          - SEC
+          title: Role
+          type: string
+        date:
+          description: YYYY-MM-DD, not in the future
+          format: date
+          title: Date
+          type: string
+        declaration:
+          description: Must be true
+          title: Declaration
+          type: boolean
+      required:
+      - name
+      - role
+      - date
+      - declaration
+      title: Asic362Signature
+      type: object
+    Asic362FormRequest:
+      additionalProperties: false
+      description: ASIC Form 362 — a company appoints (A) or ceases (C) a registered agent. POST /asic-362-forms.
+      properties:
+        generalInformation:
+          $ref: '#/components/schemas/Asic362GeneralInformation'
+        signature:
+          $ref: '#/components/schemas/Asic362Signature'
+        testTransmissionIndicator:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          description: 'Ignored: the server sets it from BAPI_ENV'
+          title: Testtransmissionindicator
+      required:
+      - generalInformation
+      - signature
+      title: Asic362FormRequest
+      type: object
+    AsicRa52General:
+      additionalProperties: false
+      properties:
+        startDate:
+          format: date
+          title: Startdate
+          type: string
+        endDate:
+          format: date
+          title: Enddate
+          type: string
+        includePriorOutstandingIndicator:
+          default: false
+          description: Also list transactions from before startDate that are still outstanding
+          title: Includeprioroutstandingindicator
+          type: boolean
+      required:
+      - startDate
+      - endDate
+      title: AsicRa52General
+      type: object
+    AsicRa52Request:
+      additionalProperties: false
+      description: ASIC Form RA52 — report of all ASIC account transactions for the registered agent over a period. POST /asic-ra52-forms.
+      properties:
+        general:
+          $ref: '#/components/schemas/AsicRa52General'
+      required:
+      - general
+      title: AsicRa52Request
+      type: object
+paths:
+  /helpers/company-name-availability:
+    get:
+      operationId: check_company_name_availability
+      summary: Check whether a proposed company name is available with ASIC (free helper).
+      parameters:
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Availability result
+  /helpers/business-name-availability:
+    get:
+      operationId: check_business_name_availability
+      summary: Check whether a proposed business (trading) name is available (free helper).
+      parameters:
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Availability result
+  /helpers/business-industries:
+    get:
+      operationId: list_business_industries
+      summary: List business-industry codes accepted by ABN / business-name registrations.
+      responses:
+        '200':
+          description: Industry list
+  /helpers/entitlement-questionnaire:
+    get:
+      operationId: get_abn_entitlement_questionnaire
+      summary: ABN entitlement questionnaire (questions an applicant must answer before ABN registration).
+      responses:
+        '200':
+          description: Questionnaire
+  /lookup/abn/{abn}:
+    get:
+      operationId: lookup_abn
+      summary: Validate an ABN (11 digits) and look up the entity on the ABR. Free, read-only.
+      parameters:
+      - name: abn
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9]{11}$
+      responses:
+        '200':
+          description: Entity details
+  /lookup/acn/{acn}:
+    get:
+      operationId: lookup_acn
+      summary: Validate an ACN (9 digits) and look up the company on ASIC. Free, read-only.
+      parameters:
+      - name: acn
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[0-9]{9}$
+      responses:
+        '200':
+          description: Company details
+  /ppsr/searches:
+    post:
+      operationId: create_ppsr_search
+      summary: Create a PPSR search ($6.00 per search in LIVE). Returns requestId; poll get_ppsr_search.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PpsrSearchRequest'
+      responses:
+        '201':
+          description: '{requestId, status: new}'
+  /ppsr/searches/{requestId}:
+    get:
+      operationId: get_ppsr_search
+      summary: Poll a PPSR search (new -> processing -> completed | failed); results under data.
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Search status / results
+  /status/{requestId}:
+    get:
+      operationId: get_request_status
+      summary: Poll any lodgement by requestId (see LodgementStatus lifecycle).
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Lodgement status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LodgementStatus'
+  /account-status:
+    get:
+      operationId: get_account_status
+      summary: Plan / billing / scope state of the current API key.
+      responses:
+        '200':
+          description: Account status
+  /company-registrations:
+    post:
+      operationId: lodge_company_registration
+      summary: 'Lodge ASIC Form 201 (new company). LIVE ≈ $50 + ASIC fee. Returns {response: {requestId}}; poll /status/{requestId}.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyRegistrationRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /abn-registrations:
+    post:
+      operationId: lodge_abn_registration
+      summary: 'Apply for an ABN (ATO). LIVE ≈ $25. Returns {requestId, status: received, billing}; poll /status/{requestId}.
+        Add testTransmissionIndicator=false only for a real lodgement.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbnRegistrationRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /business-name-registrations:
+    post:
+      operationId: lodge_business_name_registration
+      summary: 'Register a business name (ASIC). LIVE ≈ $15 + ASIC fee. Returns {requestId, status: new}; poll /business-name-registrations/{requestId}/status
+        for the payment link / certificate.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessNameRegistrationRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /business-name-registrations/{requestId}/status:
+    get:
+      operationId: get_business_name_registration_status
+      summary: 'Business-name status: ''wating ASIC CC payment'' carries response.transactionPaymentUrl; ''cancelled'' ->
+        requestNewPaymentLink.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /business-name-registrations/{requestId}/requestNewPaymentLink:
+    get:
+      operationId: refresh_business_name_payment_link
+      summary: Re-issue the ASIC card payment link for a cancelled/expired business-name payment (same requestId).
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /business-name-renewals:
+    post:
+      operationId: lodge_business_name_renewal
+      summary: 'Renew a business name (ASIC) for 1 or 3 years. LIVE ≈ $15 + ASIC fee. Returns {requestId, status: new}; poll
+        /business-name-renewals/{requestId}/status.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessNameRenewalRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /asic-484-forms:
+    post:
+      operationId: lodge_asic_484_form
+      summary: 'Lodge ASIC Form 484 (changes to company details: addresses, officeholders, shares, UHC). Strings upper-case.
+        Returns {response: {requestId, documentNumber}}; poll /asic-484-forms/{requestId}/status.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Asic484FormRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /business-name-renewals/{requestId}/status:
+    get:
+      operationId: get_business_name_renewal_status
+      summary: Renewal status; finished -> response {transactionDocumentUrl, businessNameNumber, renewalTo}.
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /asic-484-forms/{requestId}/status:
+    get:
+      operationId: get_asic_484_form_status
+      summary: 'Form 484 status: {response: {requestId, status, documentNumber, info}}.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /monitoring/entities:
+    post:
+      operationId: start_entity_monitoring
+      summary: Start monitoring up to 25 entities for 12 months ($18 each live). Send an Idempotency-Key header.
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - entities
+              properties:
+                entities:
+                  type: array
+                  minItems: 1
+                  maxItems: 25
+                  items:
+                    $ref: '#/components/schemas/MonitoredEntityInput'
+      responses:
+        '201':
+          description: '{unitPrice, total, entities[]}'
+        '422':
+          description: validation_failed with per-row errors
+    get:
+      operationId: list_monitored_entities
+      summary: 'List monitored entities. Filters: status, acn, abn, expiresBefore, perPage (≤100), page.'
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+          - processing
+          - active
+          - stopped
+          - expired
+      - name: acn
+        in: query
+        schema:
+          type: string
+      - name: abn
+        in: query
+        schema:
+          type: string
+      - name: expiresBefore
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: perPage
+        in: query
+        schema:
+          type: integer
+          maximum: 100
+      - name: page
+        in: query
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: data[] + meta
+  /monitoring/entities/renew:
+    post:
+      operationId: renew_entity_monitoring
+      summary: Renew up to 25 entities for another 12 months ($18 each live). Idempotency-Key header REQUIRED.
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - ids
+              properties:
+                ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 25
+                  items:
+                    type: integer
+      responses:
+        '201':
+          description: '{unitPrice, total, entities[]}'
+  /monitoring/entities/{id}:
+    get:
+      operationId: get_monitored_entity
+      summary: One monitored entity.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: entity object
+    delete:
+      operationId: stop_entity_monitoring
+      summary: Stop monitoring now (no refund; resumable while the term runs).
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: entity with status stopped
+  /monitoring/entities/{id}/resume:
+    post:
+      operationId: resume_entity_monitoring
+      summary: Resume a stopped entity whose paid term is still running (free).
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: entity
+  /monitoring/entities/{id}/snapshot:
+    get:
+      operationId: get_entity_snapshot
+      summary: Current record from every monitored source (JSON). Active entities only.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: '{entity, snapshot}'
+  /monitoring/entities/{id}/events:
+    get:
+      operationId: list_entity_monitoring_events
+      summary: That entity's events, newest first.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: perPage
+        in: query
+        schema:
+          type: integer
+          maximum: 100
+      - name: page
+        in: query
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: data[] + meta
+  /monitoring/events:
+    get:
+      operationId: list_monitoring_events
+      summary: All events oldest first; since = last monitoringEventId or ISO date-time.
+      parameters:
+      - name: since
+        in: query
+        schema:
+          type: string
+      - name: perPage
+        in: query
+        schema:
+          type: integer
+          maximum: 100
+      - name: page
+        in: query
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: data[] + meta
+  /monitoring/events/{id}:
+    get:
+      operationId: get_monitoring_event
+      summary: One event in full (description, source, effectiveDate, metadata, entity).
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: event
+  /company-name-changes:
+    post:
+      operationId: lodge_company_name_change
+      summary: 'Lodge ASIC Form 205A (change of company name). Returns {requestId, status: sent}; poll /company-name-changes/{requestId}/status;
+        certificate PDF at /company-name-changes/{requestId}/certificate.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyNameChangeRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /company-deregistrations:
+    post:
+      operationId: lodge_company_deregistration
+      summary: 'Lodge ASIC Form 6010 (voluntary deregistration; all six s.601AA declarations must be true). Returns {response:
+        {requestId}}; poll /company-deregistrations/{requestId}/status.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyDeregistrationRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /asic-361-forms:
+    post:
+      operationId: lodge_asic_361_form
+      summary: 'Lodge ASIC Form 361 (registered agent ceases to act for a company). Returns {response: {requestId, documentNumber}}.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Asic361FormRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /asic-362-forms:
+    post:
+      operationId: lodge_asic_362_form
+      summary: 'Lodge ASIC Form 362 (company appoints (A) or ceases (C) a registered agent). Returns {response: {requestId,
+        documentNumber}}.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Asic362FormRequest'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /asic-ra52-forms:
+    post:
+      operationId: request_asic_account_transactions
+      summary: Request ASIC Form RA52 (agent account transactions report for a period). Finished status carries records[].
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AsicRa52Request'
+      responses:
+        '201':
+          description: Lodged; requestId for status polling
+        '400':
+          description: Validation failed; nothing sent, nothing charged
+  /company-name-changes/{requestId}/status:
+    get:
+      operationId: get_company_name_change_status
+      summary: 'Name change status: {requestId, status, documentNumber, response {companyName, acn, proposedName}}.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /company-deregistrations/{requestId}/status:
+    get:
+      operationId: get_company_deregistration_status
+      summary: 'Deregistration status: {response: {status, documentNumber, info {…, dateOfDeregistration}}}.'
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /asic-361-forms/{requestId}/status:
+    get:
+      operationId: get_asic_361_form_status
+      summary: Form 361 status (nested under response).
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /asic-362-forms/{requestId}/status:
+    get:
+      operationId: get_asic_362_form_status
+      summary: Form 362 status (nested under response).
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /asic-ra52-forms/{requestId}/status:
+    get:
+      operationId: get_asic_ra52_form_status
+      summary: Form RA52 status; finished carries response.records[].
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Status
+  /webhooks:
+    get:
+      operationId: list_webhooks
+      summary: List webhook endpoints for this API key (secrets omitted).
+      responses:
+        '200':
+          description: endpoints
+    post:
+      operationId: create_webhook
+      summary: Register a webhook endpoint (HTTPS, public host; ≤10 per key). The signing secret is returned ONCE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - url
+              - eventTypes
+              properties:
+                url:
+                  type: string
+                  format: uri
+                eventTypes:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    enum: &id001
+                    - '*'
+                    - company_registration.status_changed
+                    - abn_registration.status_changed
+                    - business_name_registration.status_changed
+                    - business_name_renewal.status_changed
+                    - ppsr.alert.grantor_registration_changed
+                    - monitoring.change_detected
+                    - monitoring.expiring
+                    - monitoring.expired
+      responses:
+        '201':
+          description: endpoint incl. secret (whsec_…)
+  /webhooks/{id}:
+    patch:
+      operationId: update_webhook
+      summary: Update URL, event types or enabled flag.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                eventTypes:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    enum: *id001
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: endpoint
+    delete:
+      operationId: delete_webhook
+      summary: Remove a webhook endpoint.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: deleted
+  /webhooks/{id}/rotate-secret:
+    post:
+      operationId: rotate_webhook_secret
+      summary: Invalidate the signing secret and issue a new one (returned once).
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: endpoint incl. new secret
