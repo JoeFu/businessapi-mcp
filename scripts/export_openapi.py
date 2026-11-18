@@ -2,7 +2,7 @@
 Merge the Pydantic request models into openapi.yaml so route B (server_from_openapi.py) gets the same typed
 lodgement endpoints as the hand-written server.
 
-    uv run --with fastmcp --with pyyaml export_openapi.py
+    uv run --group dev scripts/export_openapi.py
 
 Re-run after editing models.py. Hand-written parts of openapi.yaml are preserved; only components.schemas entries
 and the paths listed in LODGEMENTS are (re)generated.
@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from models import (
+from businessapi_mcp.models import (
     AbnRegistrationRequest,
     Asic361FormRequest,
     Asic362FormRequest,
@@ -28,7 +28,7 @@ from models import (
     MonitoredEntityInput,
 )
 
-SPEC = Path(__file__).with_name("openapi.yaml")
+SPEC = Path(__file__).resolve().parent.parent / "openapi.yaml"
 
 LODGEMENTS = [
     # path, operationId, model, summary

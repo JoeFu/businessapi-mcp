@@ -1,13 +1,11 @@
 """
 Business API (businessapi.com.au) -> MCP server
 
-Run:   uv run --with fastmcp server.py          (stdio transport, for Claude Code / Claude Desktop / Cursor)
-Env:
-  BAPI_API_KEY     bapi_sk_test_...  or  bapi_sk_live_...   (https://businessapi.com.au/user/api-keys)
-  BAPI_ENV         test | live   default test; must match the key prefix
-  BAPI_ALLOW_LIVE  true          required before ANY live POST/PATCH/DELETE: those lodge real
-                                 forms with ASIC/ATO/PPSR and are billed (e.g. PPSR search $6,
-                                 company registration $50 + government fee)
+Run:   businessapi-mcp            (stdio; what MCP clients launch — cli.py adds setup / status / doctor / install)
+Config (config.py): BAPI_API_KEY from the environment, ./.env, or the user config file written by
+  `businessapi-mcp setup`; the environment (sandbox vs live) is inferred from the key prefix.
+  BAPI_ALLOW_LIVE=true is required before ANY live POST/PATCH/DELETE: those lodge real forms with
+  ASIC/ATO/PPSR and are billed (e.g. PPSR search $6, company registration $50 + government fee).
 
 Design: the model "learns" the API from three places it can see over MCP:
   1. server `instructions`            -> one-paragraph orientation at connect time
@@ -33,14 +31,8 @@ from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 from pydantic import BaseModel, ValidationError
 
-try:  # optional: read bapi-mcp/.env so `uv run --with fastmcp server.py` finds the key without exporting it
-    from dotenv import load_dotenv
-
-    load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
-except ImportError:  # pragma: no cover - python-dotenv ships with fastmcp, but stay importable without it
-    pass
-
-from models import (
+from .config import SETUP_HINT, load_settings
+from .models import (
     COMPANY_COMBINATIONS,
     SUBTYPES_BY_ENTITY_TYPE,
     AbnRegistrationRequest,
@@ -59,10 +51,11 @@ from models import (
     validate_webhook_url,
 )
 
+SETTINGS = load_settings()
 BASE_URL = "https://businessapi.com.au"
-API_KEY = os.environ.get("BAPI_API_KEY", "").strip()
-ENV = os.environ.get("BAPI_ENV", "test").strip().lower()
-ALLOW_LIVE = os.environ.get("BAPI_ALLOW_LIVE", "").strip().lower() in ("1", "true", "yes")
+API_KEY = SETTINGS.api_key
+ENV = SETTINGS.env
+ALLOW_LIVE = SETTINGS.allow_live
 PREFIX = "/api/v2" if ENV == "live" else "/api/test/v2"
 TEST_TRANSMISSION = ENV != "live"  # ABN / business-name payload flag; sandbox always uses the test service
 
@@ -71,9 +64,9 @@ TEST_TRANSMISSION = ENV != "live"  # ABN / business-name payload flag; sandbox a
 # default (lazy)            -> lodge_* tools take `request` as a plain object; the model fetches the exact schema
 #                              on demand with get_request_schema(form) / resource bapi://schemas/{form}.
 # BAPI_TOOLSETS=a,b         -> expose only these groups, so one codebase can run as several small MCP servers.
-INLINE_SCHEMAS = os.environ.get("BAPI_INLINE_SCHEMAS", "").strip().lower() in ("1", "true", "yes")
+INLINE_SCHEMAS = SETTINGS.inline_schemas
 ALL_TOOLSETS = ("lookup", "registrations", "agent_forms", "monitoring", "webhooks", "ppsr", "core")
-_toolsets_raw = os.environ.get("BAPI_TOOLSETS", "all").strip().lower()
+_toolsets_raw = SETTINGS.toolsets_raw
 ENABLED_TOOLSETS: set[str] = (
     set(ALL_TOOLSETS) if _toolsets_raw in ("", "all", "*") else {t.strip() for t in _toolsets_raw.split(",") if t.strip()}
 )
@@ -656,7 +649,9 @@ activityCode: Importer · Manufacturer · Retailer · Wholesaler
 mcp = FastMCP(
     name="Business API (AU)",
     instructions=(
-        "Tools for businessapi.com.au — Australian ASIC/ATO/ABRS company, ABN, business-name, ASIC-form, PPSR and "
+        ("NO API KEY CONFIGURED: every call will fail until the user runs `businessapi-mcp setup` or sets BAPI_API_KEY. "
+         if not API_KEY else "")
+        + "Tools for businessapi.com.au — Australian ASIC/ATO/ABRS company, ABN, business-name, ASIC-form, PPSR and "
         f"entity-monitoring APIs. This server is in the **{ENV.upper()}** environment"
         + ("" if ENV == "test" else " — live POST calls lodge real forms and are billed")
         + ". Read resource bapi://docs/overview before the first call and bapi://docs/endpoints to find a path. "
@@ -702,11 +697,9 @@ _client: httpx.AsyncClient | None = None
 def _http() -> httpx.AsyncClient:
     global _client
     if not API_KEY:
-        raise ValueError("BAPI_API_KEY is not set. Create a key at https://businessapi.com.au/user/api-keys")
-    if ENV not in ("test", "live"):
-        raise ValueError("BAPI_ENV must be 'test' or 'live'")
-    if f"_{ENV}_" not in API_KEY:
-        raise ValueError(f"BAPI_ENV={ENV} but BAPI_API_KEY is not a {ENV} key (expected prefix bapi_sk_{ENV}_)")
+        raise ValueError("No Business API key is configured. " + SETUP_HINT)
+    if SETTINGS.problems:
+        raise ValueError("Configuration problem: " + "; ".join(SETTINGS.problems))
     if _client is None:
         _client = httpx.AsyncClient(
             base_url=BASE_URL,

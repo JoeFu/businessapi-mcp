@@ -1,0 +1,1517 @@
+{
+  "company_registration": {
+    "generalInformation": {
+      "companyName": "MY DEMO COMPANY PTY LTD",
+      "acnNameIndicator": false,
+      "acnNameLegalElements": "",
+      "companyType": "APTY",
+      "companyClass": "LMSG",
+      "companySubClass": "PROP",
+      "jurisdiction": "NSW",
+      "governedByConstitution": "",
+      "nonCashSharesIndicator": "",
+      "nameReservedIndicator": "",
+      "nameIdenticalIndicator": "",
+      "nameIdenticalAbn": "",
+      "residentialOfficeholders": true
+    },
+    "nameReserved": {
+      "individual": {
+        "familyName": "",
+        "givenName1": "",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "organisation": {
+        "name": ""
+      },
+      "documentNumber": ""
+    },
+    "nameIdentical": [
+      {
+        "state": "",
+        "registrationNumber": ""
+      }
+    ],
+    "registeredOffice": {
+      "address": {
+        "careOf": "",
+        "line2": "UNIT 4",
+        "street": "9 KENT STREET",
+        "locality": "SYDNEY",
+        "state": "NSW",
+        "postcode": "2000"
+      },
+      "occupyIndicator": false,
+      "occupierName": "ANOTHER COMPANY PTY LTD",
+      "occupierConsent": true,
+      "openStandardHoursIndicator": "",
+      "openHours": [
+        {
+          "openHour": "",
+          "closeHour": ""
+        }
+      ]
+    },
+    "principalPlaceOfBusiness": {
+      "address": {
+        "careOf": "",
+        "line2": "UNIT 4",
+        "street": "9 KENT STREET",
+        "locality": "SYDNEY",
+        "state": "NSW",
+        "postcode": "2000"
+      }
+    },
+    "ultimateHoldingCompany": {
+      "name": "MY HOLDING COMPANY PTY LTD",
+      "acn": "",
+      "abn": "",
+      "country": "NEW ZEALAND"
+    },
+    "officeHolders": [
+      {
+        "name": {
+          "familyName": "DOE",
+          "givenName1": "JOHN",
+          "givenName2": "",
+          "givenName3": ""
+        },
+        "birthDetails": {
+          "date": "1950-12-31",
+          "locality": "SYDNEY",
+          "localityQualifier": "NSW",
+          "intlIndicator": false
+        },
+        "address": {
+          "careOf": "",
+          "line2": "UNIT 4",
+          "street": "9 KENT STREET",
+          "locality": "SYDNEY",
+          "state": "NSW",
+          "postcode": "2000",
+          "country": ""
+        },
+        "formerName": {
+          "familyName": "CITIZEN",
+          "givenName1": "JOHN",
+          "givenName2": "",
+          "givenName3": ""
+        },
+        "roles": [
+          "DIR"
+        ]
+      }
+    ],
+    "shareStructure": [
+      {
+        "classCode": "ORD",
+        "classTitle": "ORDINARY",
+        "numberIssued": 100,
+        "totalAmountPaid": 100,
+        "totalAmountUnpaid": 0
+      }
+    ],
+    "shareAllocation": [
+      {
+        "classCode": "ORD",
+        "numberIssued": "100",
+        "fullyPaidIndicator": true,
+        "totalAmountPaid": 100,
+        "totalAmountUnpaid": 0,
+        "amountPaidPerShare": 1,
+        "amountUnpaidPerShare": 0,
+        "beneficialOwnerIndicator": false,
+        "beneficialOwner": "JANE DOE",
+        "holdingOwners": [
+          {
+            "individual": {
+              "familyName": "DOE",
+              "givenName1": "JOHN",
+              "givenName2": "",
+              "givenName3": ""
+            },
+            "organisation": {
+              "name": "",
+              "acn": ""
+            },
+            "address": {
+              "careOf": "",
+              "line2": "UNIT 4",
+              "street": "9 KENT STREET",
+              "locality": "SYDNEY",
+              "state": "NSW",
+              "postcode": "2000",
+              "country": ""
+            }
+          }
+        ]
+      }
+    ],
+    "nonShareMembersAmount": "",
+    "nonShareMembers": [
+      {
+        "individual": {
+          "familyName": "",
+          "givenName1": "",
+          "givenName2": "",
+          "givenName3": ""
+        },
+        "organisation": {
+          "name": "",
+          "acn": ""
+        },
+        "address": {
+          "careOf": "",
+          "line2": "",
+          "street": "",
+          "locality": "",
+          "state": "",
+          "postcode": "",
+          "country": ""
+        }
+      }
+    ],
+    "applicant": {
+      "individual": {
+        "familyName": "DOE",
+        "givenName1": "JOHN",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "organisation": {
+        "name": "",
+        "acn": ""
+      },
+      "organisationSignatoryIndividual": {
+        "familyName": "",
+        "givenName1": "",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "organisationSignatoryRole": "",
+      "address": {
+        "careOf": "",
+        "line2": "UNIT 4",
+        "street": "9 KENT STREET",
+        "locality": "SYDNEY",
+        "state": "NSW",
+        "postcode": "2000",
+        "country": ""
+      },
+      "dateSigned": "2021-06-30",
+      "declaresTrueAndCorrectIndicator": true
+    },
+    "admin": {
+      "manualReviewIndicator": false,
+      "manualReviewText": ""
+    }
+  },
+  "abn_registration_117_006": {
+    "entityType": "117",
+    "entitySubType": "006",
+    "entitySubTypeAdditional": null,
+    "entitlement": {
+      "firstQuestion": "152",
+      "outcomeId": 7,
+      "outcome": true,
+      "questionnaire": [
+        {
+          "questionId": 152,
+          "answerId": 336,
+          "nextQuestionId": 139
+        },
+        {
+          "questionId": 139,
+          "answerId": 310,
+          "nextQuestionId": 3
+        },
+        {
+          "questionId": 3,
+          "answerId": 339,
+          "nextQuestionId": 143
+        },
+        {
+          "questionId": 143,
+          "answerId": 318,
+          "nextQuestionId": 0
+        }
+      ]
+    },
+    "applicant": {
+      "individual": {
+        "title": "Mr",
+        "familyName": "SMITH",
+        "givenName": "JOHN",
+        "otherGivenName": null,
+        "dateOfBirth": "1985-06-15",
+        "genderCode": "1"
+      },
+      "tfn": "123456782"
+    },
+    "applicationDetail": {
+      "tfnIndicator": true,
+      "abnApplicationIndicator": true,
+      "tfnApplicationIndicator": false
+    },
+    "applicationReason": {
+      "code": "NEW",
+      "firstTimeDirectorIndicator": true
+    },
+    "businessActivity": {
+      "code": "7749",
+      "description": "Cleaning - commercial (offices, shops, exterior and interior building cleaning, except sand blasting or steam cleaning)",
+      "abnStartDate": "2026-09-01",
+      "abnEndDate": null,
+      "governmentIndicator": false,
+      "agriculturalIndicator": false
+    },
+    "mainAddresses": {
+      "business": {
+        "line2": null,
+        "street": "1 Example Street",
+        "locality": "Sample Suburb",
+        "state": "QLD",
+        "postcode": "4000",
+        "countryCode": "AU"
+      },
+      "postal": {
+        "line2": null,
+        "street": "1 Example Street",
+        "locality": "Sample Suburb",
+        "state": "QLD",
+        "postcode": "4000",
+        "countryCode": "AU"
+      },
+      "businessEmail": "sample@example.com",
+      "correspondenceEmail": null,
+      "businessPhone": "0400000000",
+      "sameMainBusinessActivityIndicator": true,
+      "businessActivityCode": "7749",
+      "businessActivityDescription": "Cleaning - commercial (offices, shops, exterior and interior building cleaning, except sand blasting or steam cleaning)",
+      "additionalBusinessLocationsIndicator": false
+    },
+    "taxationInformation": {
+      "nonprofitIndicator": false,
+      "incomeTaxExemptionIndicator": false,
+      "australianResidentIndicator": true
+    },
+    "declaration": {
+      "fullName": "Mr JOHN SMITH",
+      "positionHeld": "Owner",
+      "phone": "0400000000",
+      "date": "2026-09-01",
+      "signatureAcceptanceIndicator": true,
+      "signatureText": "Mr JOHN SMITH"
+    },
+    "authorisedContacts": [
+      {
+        "title": "Mr",
+        "familyName": "SMITH",
+        "givenName": "JOHN",
+        "positionHeld": "Owner",
+        "email": "sample@example.com",
+        "phone": "0400000000",
+        "preferredLanguageCode": "ENG",
+        "preferredLanguageOther": null
+      }
+    ],
+    "testTransmissionIndicator": true
+  },
+  "abn_registration_051_027": {
+    "entityType": "051",
+    "entitySubType": "027",
+    "entitySubTypeAdditional": null,
+    "entitlement": {
+      "firstQuestion": "20",
+      "outcomeId": "20",
+      "outcome": "1",
+      "questionnaire": [
+        {
+          "questionId": "20",
+          "answerId": "44",
+          "nextQuestionId": "0"
+        }
+      ]
+    },
+    "applicant": {
+      "organisation": {
+        "acn": "000000037",
+        "name": "SAMPLE COMPANY PTY LTD"
+      }
+    },
+    "applicationDetail": {
+      "tfnIndicator": "0",
+      "abnApplicationIndicator": "1",
+      "tfnApplicationIndicator": "1"
+    },
+    "applicationReason": {
+      "code": "NEW",
+      "firstTimeDirectorIndicator": "0"
+    },
+    "businessActivity": {
+      "code": "6419",
+      "description": "Cosmetics retailing - direct selling",
+      "abnStartDate": "2026-09-01",
+      "governmentIndicator": "0",
+      "agriculturalIndicator": "0"
+    },
+    "taxationInformation": {
+      "nonprofitIndicator": "0",
+      "incomeTaxExemptionIndicator": "0",
+      "australianResidentIndicator": "1"
+    },
+    "mainAddresses": {
+      "business": {
+        "line2": "UNIT 1",
+        "street": "1 EXAMPLE STREET",
+        "locality": "SAMPLE SUBURB",
+        "state": "NSW",
+        "postcode": "2000",
+        "countryCode": "AU"
+      },
+      "postal": {
+        "line2": null,
+        "street": "PO BOX 1",
+        "locality": "SAMPLE SUBURB",
+        "state": "NSW",
+        "postcode": "2000",
+        "countryCode": "AU"
+      },
+      "businessEmail": "sample@example.com",
+      "correspondenceEmail": "sample@example.com",
+      "businessPhone": "0400000000",
+      "sameMainBusinessActivityIndicator": "1",
+      "businessActivityCode": "6419",
+      "businessActivityDescription": "Cosmetics retailing - direct selling",
+      "additionalBusinessLocationsIndicator": "0"
+    },
+    "associates": {
+      "individuals": [
+        {
+          "familyName": "SMITH",
+          "givenName": "JOHN",
+          "otherGivenName": null,
+          "dateOfBirth": "1980-01-01",
+          "positionHeld": [
+            "POF"
+          ],
+          "tfn": "111111101",
+          "line2": null,
+          "street": "1 EXAMPLE STREET",
+          "locality": "SAMPLE SUBURB",
+          "state": "NSW",
+          "postcode": "2000",
+          "countryCode": "AU"
+        },
+        {
+          "familyName": "DOE",
+          "givenName": "JANE",
+          "otherGivenName": null,
+          "dateOfBirth": "1982-05-10",
+          "positionHeld": [
+            "DIR"
+          ],
+          "tfn": "222222202",
+          "line2": null,
+          "street": "1 EXAMPLE STREET",
+          "locality": "SAMPLE SUBURB",
+          "state": "NSW",
+          "postcode": "2000",
+          "countryCode": "AU"
+        }
+      ],
+      "organisations": [
+        {
+          "name": "SAMPLE HOLDINGS PTY LTD",
+          "acn": "000000064",
+          "incorporationDate": "2020-01-01",
+          "positionHeld": [
+            "CSH"
+          ],
+          "tfn": "333333303",
+          "line2": null,
+          "street": "2 EXAMPLE STREET",
+          "locality": "SAMPLE SUBURB",
+          "state": "NSW",
+          "postcode": "2000",
+          "countryCode": "AU"
+        }
+      ]
+    },
+    "taxRegistrations": {
+      "gst": {
+        "registrationStartDate": "2026-09-01",
+        "turnoverRangeCode": "$0 - $74,999",
+        "lodgementFrequencyCode": "Annually",
+        "reasonCode": "Voluntary",
+        "cashAccountingIndicator": "1",
+        "importIndicator": "0"
+      }
+    },
+    "authorisedContacts": [
+      {
+        "familyName": "SMITH",
+        "givenName": "JOHN",
+        "otherGivenName": null,
+        "email": "sample@example.com",
+        "phone": "0400000000",
+        "positionHeld": "POF"
+      }
+    ],
+    "declaration": {
+      "fullName": "JOHN SMITH",
+      "positionHeld": "POF",
+      "phone": "0400000000",
+      "date": "2026-09-01",
+      "signatureAcceptanceIndicator": "1",
+      "signatureText": "JOHN SMITH"
+    },
+    "testTransmissionIndicator": true
+  },
+  "abn_registration_161_150": {
+    "entityType": "161",
+    "entitySubType": "150",
+    "entitySubTypeAdditional": null,
+    "entitlement": {
+      "firstQuestion": 153,
+      "outcomeId": 7,
+      "outcome": true,
+      "questionnaire": [
+        {
+          "questionId": 153,
+          "answerId": 366,
+          "nextQuestionId": 140
+        },
+        {
+          "questionId": 140,
+          "answerId": 312,
+          "nextQuestionId": 14
+        },
+        {
+          "questionId": 14,
+          "answerId": 345,
+          "nextQuestionId": 144
+        },
+        {
+          "questionId": 144,
+          "answerId": 320,
+          "nextQuestionId": 0
+        }
+      ]
+    },
+    "applicant": {
+      "organisation": {
+        "name": "SAMPLE TRADING PARTNERSHIP"
+      }
+    },
+    "applicationDetail": {
+      "tfnIndicator": false,
+      "abnApplicationIndicator": true,
+      "tfnApplicationIndicator": false
+    },
+    "applicationReason": {
+      "code": "NEW",
+      "firstTimeDirectorIndicator": true,
+      "firstTimeSelfEmployedIndicator": true
+    },
+    "businessActivity": {
+      "code": "5975",
+      "description": "Mobile homes or cabins retailing",
+      "abnStartDate": "2026-09-01",
+      "abnEndDate": null,
+      "governmentIndicator": false,
+      "agriculturalIndicator": false
+    },
+    "taxationInformation": {
+      "nonprofitIndicator": false,
+      "incomeTaxExemptionIndicator": false,
+      "australianResidentIndicator": true
+    },
+    "mainAddresses": {
+      "business": {
+        "line2": null,
+        "street": "1 Example Street",
+        "locality": "Sample Suburb",
+        "state": "VIC",
+        "postcode": "3000",
+        "countryCode": "AU"
+      },
+      "postal": {
+        "line2": null,
+        "street": "1 Example Street",
+        "locality": "Sample Suburb",
+        "state": "VIC",
+        "postcode": "3000",
+        "countryCode": "AU"
+      },
+      "businessEmail": "sample@example.com",
+      "correspondenceEmail": null,
+      "businessPhone": "0400000000",
+      "sameMainBusinessActivityIndicator": true,
+      "businessActivityCode": "5975",
+      "businessActivityDescription": "Mobile homes or cabins retailing",
+      "additionalBusinessLocationsIndicator": false
+    },
+    "additionalAddresses": [],
+    "associates": {
+      "individuals": [
+        {
+          "title": "Mr",
+          "familyName": "SMITH",
+          "givenName": "JOHN",
+          "otherGivenName": null,
+          "dateOfBirth": "1985-06-15",
+          "genderCode": "1",
+          "positionHeld": [
+            "PTN"
+          ],
+          "tfn": "444444404",
+          "line2": null,
+          "street": "1 Example Street",
+          "locality": "Sample Suburb",
+          "state": "VIC",
+          "postcode": "3000",
+          "countryCode": "AU"
+        },
+        {
+          "title": "Mrs",
+          "familyName": "SMITH",
+          "givenName": "JANE",
+          "otherGivenName": null,
+          "dateOfBirth": "1987-02-20",
+          "genderCode": "2",
+          "positionHeld": [
+            "PTN"
+          ],
+          "tfn": "555555505",
+          "line2": null,
+          "street": "1 Example Street",
+          "locality": "Sample Suburb",
+          "state": "VIC",
+          "postcode": "3000",
+          "countryCode": "AU"
+        }
+      ],
+      "other": {
+        "legalRepresentativeIndicator": false
+      }
+    },
+    "declaration": {
+      "fullName": "Mr JOHN SMITH",
+      "positionHeld": "PTN",
+      "phone": "0400000000",
+      "date": "2026-09-01",
+      "signatureAcceptanceIndicator": true,
+      "signatureText": "Mr JOHN SMITH"
+    },
+    "authorisedContacts": [
+      {
+        "title": "Mr",
+        "familyName": "SMITH",
+        "givenName": "JOHN",
+        "positionHeld": "PTN",
+        "email": "sample@example.com",
+        "phone": "0400000000",
+        "preferredLanguageCode": "ENG",
+        "preferredLanguageOther": null
+      }
+    ],
+    "testTransmissionIndicator": true
+  },
+  "abn_registration_212_071": {
+    "entityType": "212",
+    "entitySubType": "071",
+    "entitySubTypeAdditional": "CHT",
+    "entitlement": {
+      "firstQuestion": "134",
+      "outcomeId": "7",
+      "outcome": "1",
+      "questionnaire": [
+        {
+          "questionId": "134",
+          "answerId": "297",
+          "nextQuestionId": "155"
+        },
+        {
+          "questionId": "155",
+          "answerId": "374",
+          "nextQuestionId": "142"
+        },
+        {
+          "questionId": "142",
+          "answerId": "316",
+          "nextQuestionId": "124"
+        },
+        {
+          "questionId": "124",
+          "answerId": "357",
+          "nextQuestionId": "146"
+        },
+        {
+          "questionId": "146",
+          "answerId": "324",
+          "nextQuestionId": "0"
+        }
+      ]
+    },
+    "applicant": {
+      "organisation": {
+        "name": "SAMPLE FAMILY TRUST"
+      }
+    },
+    "applicationDetail": {
+      "tfnIndicator": "0",
+      "abnApplicationIndicator": "1",
+      "tfnApplicationIndicator": "1"
+    },
+    "applicationReason": {
+      "code": "INV",
+      "firstTimeDirectorIndicator": "1"
+    },
+    "businessActivity": {
+      "code": "7380",
+      "description": "Property investment - as owner or sub-leaser of non-residential property (e.g. commercial, industrial)",
+      "abnStartDate": "2026-09-01",
+      "governmentIndicator": "0",
+      "agriculturalIndicator": "1"
+    },
+    "taxationInformation": {
+      "nonprofitIndicator": "0",
+      "incomeTaxExemptionIndicator": "0",
+      "taxAgentIdentifier": "00000000",
+      "australianResidentIndicator": "1"
+    },
+    "mainAddresses": {
+      "business": {
+        "line2": "SUITE 1",
+        "street": "1 SAMPLE ROAD",
+        "locality": "SAMPLE SUBURB",
+        "state": "VIC",
+        "postcode": "3000",
+        "countryCode": "AU"
+      },
+      "postal": {
+        "line2": "SUITE 1",
+        "street": "1 SAMPLE ROAD",
+        "locality": "SAMPLE SUBURB",
+        "state": "VIC",
+        "postcode": "3000",
+        "countryCode": "AU"
+      },
+      "businessEmail": "sample@example.com",
+      "correspondenceEmail": "sample@example.com",
+      "businessPhone": "0400000000",
+      "sameMainBusinessActivityIndicator": "1",
+      "businessActivityCode": "7380",
+      "businessActivityDescription": "Property investment - as owner or sub-leaser of non-residential property (e.g. commercial, industrial)",
+      "additionalBusinessLocationsIndicator": "0"
+    },
+    "associates": {
+      "individuals": [
+        {
+          "familyName": "SMITH",
+          "givenName": "JOHN",
+          "otherGivenName": null,
+          "dateOfBirth": "1980-01-01",
+          "positionHeld": [
+            "TRB"
+          ],
+          "tfn": "876543210",
+          "street": "2 SAMPLE STREET",
+          "locality": "SAMPLE SUBURB",
+          "state": "VIC",
+          "postcode": "3000",
+          "countryCode": "AU"
+        }
+      ],
+      "organisations": [
+        {
+          "name": "SAMPLE TRUSTEE PTY LTD",
+          "acn": "000000019",
+          "incorporationDate": "2020-01-01",
+          "positionHeld": [
+            "TRT"
+          ],
+          "line2": "SUITE 1",
+          "street": "1 SAMPLE ROAD",
+          "locality": "SAMPLE SUBURB",
+          "state": "VIC",
+          "postcode": "3000",
+          "countryCode": "AU"
+        }
+      ]
+    },
+    "taxRegistrations": {
+      "gst": {
+        "registrationStartDate": "2026-09-01",
+        "turnoverRangeCode": "$0 - $74,999",
+        "lodgementFrequencyCode": "Monthly",
+        "reasonCode": "Voluntary",
+        "cashAccountingIndicator": "1",
+        "importIndicator": "0"
+      }
+    },
+    "authorisedContacts": [
+      {
+        "familyName": "SMITH",
+        "givenName": "JOHN",
+        "otherGivenName": null,
+        "email": "sample@example.com",
+        "phone": "0400000000",
+        "positionHeld": "Director"
+      }
+    ],
+    "declaration": {
+      "fullName": "JOHN SMITH",
+      "positionHeld": "Director",
+      "date": "2026-09-01",
+      "signatureAcceptanceIndicator": "1",
+      "signatureText": "JOHN SMITH"
+    },
+    "testTransmissionIndicator": true
+  },
+  "abn_registration_210_196": {
+    "entityType": "210",
+    "entitySubType": "196",
+    "entitlement": {
+      "firstQuestion": 36,
+      "outcomeId": 66,
+      "outcome": true,
+      "questionnaire": [
+        {
+          "questionId": 36,
+          "answerId": 84,
+          "outcomeId": 0,
+          "nextQuestionId": 37
+        },
+        {
+          "questionId": 37,
+          "answerId": 86,
+          "outcomeId": 0,
+          "nextQuestionId": 160
+        },
+        {
+          "questionId": 160,
+          "answerId": 399,
+          "outcomeId": 0,
+          "nextQuestionId": 39
+        },
+        {
+          "questionId": 39,
+          "answerId": 396,
+          "outcomeId": 66,
+          "nextQuestionId": 0
+        }
+      ]
+    },
+    "applicant": {
+      "organisation": {
+        "name": "SAMPLE SUPERANNUATION FUND"
+      }
+    },
+    "applicationDetail": {
+      "tfnIndicator": false,
+      "abnApplicationIndicator": true,
+      "tfnApplicationIndicator": true
+    },
+    "applicationReason": {
+      "code": "NEW",
+      "firstTimeDirectorIndicator": true
+    },
+    "businessActivity": {
+      "abnStartDate": "2026-01-01",
+      "abnEndDate": null,
+      "governmentIndicator": false,
+      "agriculturalIndicator": false
+    },
+    "taxationInformation": {
+      "nonprofitIndicator": false,
+      "superBenefitMembers": 2,
+      "superCode": "A",
+      "incomeTaxExemptionIndicator": false,
+      "taxAgentIdentifier": "00000000",
+      "australianResidentIndicator": true
+    },
+    "mainAddresses": {
+      "business": {
+        "line2": null,
+        "street": "1 SAMPLE ROAD",
+        "locality": "SAMPLETOWN",
+        "state": "QLD",
+        "postcode": "4000",
+        "countryCode": "AU"
+      },
+      "postal": {
+        "line2": null,
+        "street": "1 SAMPLE ROAD",
+        "locality": "SAMPLETOWN",
+        "state": "QLD",
+        "postcode": "4000",
+        "countryCode": "AU"
+      },
+      "correspondenceEmail": "sample@example.com",
+      "businessPhone": "0400000000",
+      "businessEmail": "sample@example.com",
+      "sameMainBusinessActivityIndicator": null,
+      "businessActivityCode": null,
+      "businessActivityDescription": null,
+      "additionalBusinessLocationsIndicator": null
+    },
+    "associates": {
+      "individuals": [
+        {
+          "title": "Mr",
+          "familyName": "SMITH",
+          "givenName": "JOHN",
+          "otherGivenName": null,
+          "dateOfBirth": "1980-01-01",
+          "genderCode": "1",
+          "positionHeld": [
+            "DCT",
+            "MSF"
+          ],
+          "tfn": "111111101"
+        },
+        {
+          "title": "Mrs",
+          "familyName": "SMITH",
+          "givenName": "JANE",
+          "otherGivenName": null,
+          "dateOfBirth": "1982-01-01",
+          "genderCode": "2",
+          "positionHeld": [
+            "DCT",
+            "MSF"
+          ],
+          "tfn": "222222202"
+        }
+      ],
+      "organisations": [
+        {
+          "acn": "000000019",
+          "arbn": null,
+          "abn": null,
+          "name": "SAMPLE SUPER PTY LTD",
+          "incorporationDate": "2026-01-01",
+          "positionHeld": [
+            "TRT"
+          ],
+          "street": "1 SAMPLE ROAD",
+          "line2": null,
+          "locality": "SAMPLETOWN",
+          "state": "QLD",
+          "postcode": "4000",
+          "countryCode": "AU"
+        }
+      ],
+      "other": {
+        "legalRepresentativeIndicator": false
+      }
+    },
+    "superFundNoticeOfElection": {
+      "governingRulesIndicator": true,
+      "regulatoryElectionDate": "2026-01-01",
+      "agePensionFundIndicator": false
+    },
+    "superFundTrusteeDisclosure": {
+      "liquidatorAppointedIndicator": false,
+      "disqualifiedOfficerIndicator": false,
+      "receiverAppointedIndicator": false,
+      "smsf12MonthsActivityIndicator": true,
+      "operationCeaseIndicator": false,
+      "underOfficialManagementIndicator": false
+    },
+    "superFundFinancialDetails": {
+      "electronicServiceAlias": "SAMPLEESA"
+    },
+    "authorisedContacts": [
+      {
+        "title": "Mr",
+        "familyName": "SMITH",
+        "givenName": "JOHN",
+        "positionHeld": "Tax Agent",
+        "email": "sample@example.com",
+        "phone": "0400000000",
+        "preferredLanguageCode": null,
+        "preferredLanguageOther": null
+      }
+    ],
+    "declaration": {
+      "fullName": "JOHN SMITH",
+      "positionHeld": "Tax Agent",
+      "phone": "0400000000",
+      "date": "2026-01-01",
+      "signatureAcceptanceIndicator": true,
+      "signatureText": "JOHN SMITH"
+    },
+    "testTransmissionIndicator": true
+  },
+  "business_name_registration_IND": {
+    "generalInformation": {
+      "businessName": "SAMPLE HERBAL BLENDS",
+      "term": "3",
+      "paymentMethod": "card",
+      "email": "sample@example.com"
+    },
+    "businessAddress": {
+      "unitOrOfficeNumber": null,
+      "streetNumber": "1",
+      "streetName": "EXAMPLE",
+      "streetType": "STREET",
+      "locality": "SAMPLE SUBURB",
+      "state": "QLD",
+      "postCode": "4000"
+    },
+    "serviceAddress": {
+      "postalType": "PO BOX",
+      "postalNumber": "1",
+      "locality": "SAMPLE SUBURB",
+      "state": "QLD",
+      "postCode": "4000"
+    },
+    "entity": {
+      "type": "IND",
+      "abn": "51824753556",
+      "individual": {
+        "name": {
+          "familyName": "SMITH",
+          "givenNames": "JOHN",
+          "otherGivenNames": null
+        },
+        "birthDetails": {
+          "date": "1985-06-15",
+          "cityTown": "Sample City",
+          "state": "QLD",
+          "countryOfBirth": "AU"
+        },
+        "address": {
+          "unitOrOfficeNumber": null,
+          "streetNumber": "1",
+          "streetName": "EXAMPLE",
+          "streetType": "STREET",
+          "locality": "SAMPLE SUBURB",
+          "state": "QLD",
+          "postCode": "4000",
+          "country": "AU"
+        }
+      }
+    },
+    "signatory": {
+      "name": {
+        "familyName": "SMITH",
+        "givenNames": "JOHN"
+      },
+      "declaresTrueAndCorrectIndicator": "1"
+    },
+    "testTransmissionIndicator": "0"
+  },
+  "business_name_registration_IB": {
+    "generalInformation": {
+      "businessName": "SAMPLE TRADING CO",
+      "term": 3,
+      "paymentMethod": "card",
+      "email": "sample@example.com"
+    },
+    "businessAddress": {
+      "unitOrOfficeNumber": "1",
+      "streetNumber": "1",
+      "streetName": "EXAMPLE",
+      "streetType": "ST",
+      "locality": "SAMPLE SUBURB",
+      "state": "QLD",
+      "postCode": "4000",
+      "country": "AU"
+    },
+    "serviceAddress": {
+      "unitOrOfficeNumber": "1",
+      "streetNumber": "1",
+      "streetName": "EXAMPLE",
+      "streetType": "ST",
+      "locality": "SAMPLE SUBURB",
+      "state": "QLD",
+      "postCode": "4000",
+      "country": "AU"
+    },
+    "entity": {
+      "type": "IB",
+      "subType": "PRV",
+      "abn": "51824753556",
+      "organisation": {
+        "name": "SAMPLE COMPANY PTY LTD",
+        "acn": "000000019"
+      }
+    },
+    "signatory": {
+      "name": {
+        "givenNames": "John",
+        "familyName": "Smith"
+      },
+      "declaresTrueAndCorrectIndicator": true
+    },
+    "testTransmissionIndicator": false
+  },
+  "business_name_registration_PTSH": {
+    "generalInformation": {
+      "businessName": "SAMPLE PARTNERS",
+      "term": "1",
+      "paymentMethod": "card",
+      "email": "sample@example.com"
+    },
+    "businessAddress": {
+      "unitOrOfficeNumber": null,
+      "streetNumber": "1",
+      "streetName": "EXAMPLE",
+      "streetType": "STREET",
+      "locality": "SAMPLE SUBURB",
+      "state": "NSW",
+      "postCode": "2000"
+    },
+    "serviceAddress": {
+      "postalType": "PO BOX",
+      "postalNumber": "1",
+      "locality": "SAMPLE SUBURB",
+      "state": "NSW",
+      "postCode": "2000"
+    },
+    "entity": {
+      "type": "PTSH",
+      "subType": "PTR",
+      "abn": "51824753556",
+      "organisation": {
+        "name": "SAMPLE PARTNERS"
+      },
+      "partners": [
+        {
+          "individual": {
+            "name": {
+              "givenNames": "JOHN",
+              "familyName": "SMITH"
+            },
+            "birthDetails": {
+              "date": "1985-06-15",
+              "cityTown": "Sample City",
+              "countryOfBirth": "AU",
+              "state": "NSW"
+            },
+            "address": {
+              "streetNumber": "1",
+              "streetName": "EXAMPLE",
+              "streetType": "STREET",
+              "locality": "SAMPLE SUBURB",
+              "state": "NSW",
+              "postCode": "2000",
+              "country": "AU"
+            }
+          }
+        },
+        {
+          "organisation": {
+            "name": "SAMPLE HOLDINGS PTY LTD",
+            "acn": "000000019"
+          }
+        }
+      ]
+    },
+    "signatory": {
+      "name": {
+        "familyName": "SMITH",
+        "givenNames": "JOHN"
+      },
+      "declaresTrueAndCorrectIndicator": "1"
+    },
+    "testTransmissionIndicator": "0"
+  },
+  "business_name_registration_USTR": {
+    "generalInformation": {
+      "businessName": "SAMPLE FAMILY TRUST",
+      "term": "1",
+      "paymentMethod": "card",
+      "email": "sample@example.com"
+    },
+    "businessAddress": {
+      "unitOrOfficeNumber": null,
+      "streetNumber": "1",
+      "streetName": "EXAMPLE",
+      "streetType": "STREET",
+      "locality": "SAMPLE SUBURB",
+      "state": "VIC",
+      "postCode": "3000"
+    },
+    "serviceAddress": {
+      "postalType": "PO BOX",
+      "postalNumber": "1",
+      "locality": "SAMPLE SUBURB",
+      "state": "VIC",
+      "postCode": "3000"
+    },
+    "entity": {
+      "type": "USTR",
+      "subType": "DTT",
+      "abn": "51824753556",
+      "organisation": {
+        "name": "SAMPLE FAMILY TRUST"
+      },
+      "trustees": [
+        {
+          "organisation": {
+            "name": "SAMPLE TRUSTEE PTY LTD",
+            "acn": "000000019"
+          }
+        }
+      ]
+    },
+    "signatory": {
+      "name": {
+        "familyName": "SMITH",
+        "givenNames": "JOHN"
+      },
+      "declaresTrueAndCorrectIndicator": "1"
+    },
+    "testTransmissionIndicator": "0"
+  },
+  "business_name_registration_JV": {
+    "generalInformation": {
+      "businessName": "SAMPLE JOINT VENTURE",
+      "term": "1",
+      "paymentMethod": "card",
+      "email": "sample@example.com"
+    },
+    "businessAddress": {
+      "unitOrOfficeNumber": null,
+      "streetNumber": "1",
+      "streetName": "EXAMPLE",
+      "streetType": "STREET",
+      "locality": "SAMPLE SUBURB",
+      "state": "WA",
+      "postCode": "6000"
+    },
+    "serviceAddress": {
+      "postalType": "PO BOX",
+      "postalNumber": "1",
+      "locality": "SAMPLE SUBURB",
+      "state": "WA",
+      "postCode": "6000"
+    },
+    "entity": {
+      "type": "JV",
+      "organisation": {
+        "name": "SAMPLE JOINT VENTURE"
+      },
+      "associates": [
+        {
+          "organisation": {
+            "name": "SAMPLE HOLDINGS PTY LTD",
+            "abn": "51824753556",
+            "acn": "000000019"
+          }
+        },
+        {
+          "organisation": {
+            "name": "EXAMPLE VENTURES PTY LTD",
+            "abn": "51824753556",
+            "acn": "000000037"
+          }
+        }
+      ]
+    },
+    "signatory": {
+      "name": {
+        "familyName": "SMITH",
+        "givenNames": "JOHN"
+      },
+      "declaresTrueAndCorrectIndicator": "1"
+    },
+    "testTransmissionIndicator": "0"
+  },
+  "business_name_renewal": {
+    "generalInformation": {
+      "businessName": "MY BUSINESS NAME",
+      "abn": "51824753556",
+      "term": 1,
+      "email": "sample@example.com"
+    },
+    "applicant": {
+      "individual": {
+        "familyName": "DOE",
+        "givenNames": "JOHN"
+      },
+      "declaresTrueAndCorrectIndicator": true
+    },
+    "testTransmissionIndicator": false
+  },
+  "asic_484_form": {
+    "generalInformation": {
+      "companyName": "MY COMPANY PTY LTD",
+      "acn": "000000019",
+      "annualStatementResponseIndicator": false
+    },
+    "signature": {
+      "name": {
+        "familyName": "DOE",
+        "givenName1": "JOHN",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "role": "DIR",
+      "date": "2026-06-01",
+      "declaresTrueAndCorrectIndicator": true
+    },
+    "registeredOffice": {
+      "dateOfChange": "2026-06-01",
+      "address": {
+        "careOf": "",
+        "line2": "",
+        "street": "1 GEORGE STREET",
+        "locality": "SYDNEY",
+        "state": "NSW",
+        "postcode": "2000"
+      },
+      "occupyIndicator": true
+    },
+    "principalPlaceOfBusiness": {
+      "dateOfChange": "2026-06-01",
+      "address": {
+        "careOf": "",
+        "line2": "",
+        "street": "1 GEORGE STREET",
+        "locality": "SYDNEY",
+        "state": "NSW",
+        "postcode": "2000"
+      }
+    },
+    "officeHolders": [
+      {
+        "status": "AP",
+        "dateOfChange": "2026-06-01",
+        "name": {
+          "familyName": "SMITH",
+          "givenName1": "JANE",
+          "givenName2": "ELIZABETH",
+          "givenName3": ""
+        },
+        "birthDetails": {
+          "date": "1985-03-15",
+          "locality": "MELBOURNE",
+          "localityQualifier": "VIC"
+        },
+        "address": {
+          "street": "10 COLLINS STREET",
+          "locality": "MELBOURNE",
+          "state": "VIC",
+          "postcode": "3000",
+          "country": "AU"
+        },
+        "offices": [
+          {
+            "office": "DIR",
+            "appointmentDate": "2026-06-01",
+            "cessationDate": null
+          }
+        ]
+      }
+    ],
+    "shareStructure": [
+      {
+        "classCode": "ORD",
+        "classTitle": "ORDINARY",
+        "numberIssued": 100,
+        "totalAmountPaid": 100,
+        "totalAmountUnpaid": 0,
+        "status": "AP",
+        "earliestDateOfChange": "2026-06-01"
+      }
+    ],
+    "shareIssue": {
+      "earliestDateOfIssue": "2026-06-01",
+      "sharesIssuedForCashOnlyIndicator": true,
+      "sharesIssuedUnderWrittenContractIndicator": false,
+      "shareClasses": [
+        {
+          "classCode": "ORD",
+          "classTitle": "ORDINARY",
+          "totalNumberInIssue": 100,
+          "amountPaid": 100,
+          "amountDue": 0
+        }
+      ]
+    },
+    "members": [
+      {
+        "shareClass": "ORD",
+        "number": 100,
+        "sharesFullyPaidIndicator": true,
+        "beneficialOwnerIndicator": true,
+        "totalPaid": 100,
+        "totalUnpaid": 0,
+        "increaseDecreaseInHolding": 100,
+        "holdingStatus": "AP",
+        "dateOfChangeToRegister": "2026-06-01",
+        "holdingOwners": [
+          {
+            "individual": {
+              "familyName": "DOE",
+              "givenName1": "JOHN",
+              "givenName2": "",
+              "givenName3": ""
+            },
+            "address": {
+              "street": "1 GEORGE STREET",
+              "locality": "SYDNEY",
+              "state": "NSW",
+              "postcode": "2000",
+              "country": "AU"
+            }
+          }
+        ]
+      }
+    ],
+    "testTransmissionIndicator": false
+  },
+  "company_name_change": {
+    "generalInformation": {
+      "companyName": "SAMPLE OLD NAME PTY LTD",
+      "acn": "000000019",
+      "companyType": "APTY",
+      "proposedName": "SAMPLE NEW NAME PTY LTD",
+      "acnNameIndicator": false,
+      "acnNameLegalElements": null,
+      "nameReservedIndicator": false,
+      "nameIdenticalIndicator": false,
+      "meetingDate": "2026-09-01",
+      "meetingResolutionText": "WE AGREED TO CHANGE THE NAME FROM 'SAMPLE OLD NAME PTY LTD' TO 'SAMPLE NEW NAME PTY LTD'",
+      "paymentMethod": "DDEB"
+    },
+    "signatory": {
+      "individual": {
+        "familyName": "SMITH",
+        "givenName1": "JOHN",
+        "givenName2": null
+      },
+      "role": "DIR",
+      "dateSigned": "2026-09-01",
+      "declaresTrueAndCorrectIndicator": true
+    },
+    "admin": {
+      "manualReviewIndicator": false
+    },
+    "testTransmissionIndicator": false
+  },
+  "company_deregistration": {
+    "general": {
+      "companyName": "MY DEMO COMPANY PTY LTD",
+      "acn": "000000019",
+      "paymentMethod": "INV"
+    },
+    "declarations": {
+      "allMembersAgreeIndicator": true,
+      "notCarryingOnBusinessIndicator": true,
+      "assetsLessThan1000Indicator": true,
+      "allFeesPaidIndicator": true,
+      "noOutstandingLiabilitiesIndicator": true,
+      "notPartyToLegalProceedingsIndicator": true
+    },
+    "applicant": {
+      "individual": {
+        "familyName": "",
+        "givenName1": "",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "role": "",
+      "organisation": {
+        "name": "MY DEMO COMPANY PTY LTD",
+        "acn": "000000019"
+      },
+      "address": {
+        "careOf": "",
+        "line2": "",
+        "street": "",
+        "locality": "",
+        "state": "",
+        "postcode": "",
+        "country": ""
+      }
+    },
+    "nominee": {
+      "individual": {
+        "familyName": "DOE",
+        "givenName1": "JOHN",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "address": {
+        "careOf": "",
+        "line2": "UNIT 4",
+        "street": "9 KENT STREET",
+        "locality": "SYDNEY",
+        "state": "NSW",
+        "postcode": "2000",
+        "country": ""
+      }
+    },
+    "signatory": {
+      "individual": {
+        "familyName": "DOE",
+        "givenName1": "JOHN",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "role": "DIR",
+      "dateSigned": "2026-01-15",
+      "declaresTrueAndCorrectIndicator": true
+    }
+  },
+  "asic_361_form": {
+    "generalInformation": {
+      "companyName": "MY COMPANY NAME PTY LTD",
+      "acn": "000000019"
+    },
+    "signature": {
+      "name": {
+        "familyName": "DOE",
+        "givenName1": "JOHN",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "role": "AGT",
+      "date": "2021-07-01",
+      "agentAuthorisedIndicator": true,
+      "declaration": true
+    }
+  },
+  "asic_362_form": {
+    "generalInformation": {
+      "companyName": "MY COMPANY NAME PTY LTD",
+      "acn": "000000019",
+      "type": "A"
+    },
+    "signature": {
+      "name": {
+        "familyName": "DOE",
+        "givenName1": "JOHN",
+        "givenName2": "",
+        "givenName3": ""
+      },
+      "role": "DIR",
+      "date": "2021-07-01",
+      "declaration": true
+    }
+  },
+  "asic_ra52": {
+    "general": {
+      "startDate": "2026-01-01",
+      "endDate": "2026-06-30",
+      "includePriorOutstandingIndicator": true
+    }
+  },
+  "monitoring_entities": [
+    {
+      "acn": "004085616",
+      "reference": "acme"
+    },
+    {
+      "abn": "51824753556"
+    }
+  ]
+}

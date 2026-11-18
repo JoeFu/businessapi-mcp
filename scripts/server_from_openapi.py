@@ -1,7 +1,7 @@
 """
 Route B: generate the MCP server from openapi.yaml instead of hand-writing tools.
 
-    uv run --with fastmcp --with pyyaml server_from_openapi.py
+    uv run --group dev scripts/server_from_openapi.py
 
 Every `operationId` in openapi.yaml becomes an MCP tool; its summary/description becomes the tool
 description and its parameters/requestBody become the input schema. Add an endpoint to the YAML and
@@ -18,14 +18,14 @@ import httpx2 as httpx  # fastmcp >= 4 ships the httpx2 fork; the API is the sam
 import yaml
 from fastmcp import FastMCP
 
-API_KEY = os.environ.get("BAPI_API_KEY", "").strip()
-ENV = os.environ.get("BAPI_ENV", "test").strip().lower()
-ALLOW_LIVE = os.environ.get("BAPI_ALLOW_LIVE", "").strip().lower() in ("1", "true", "yes")
+from businessapi_mcp.config import SETUP_HINT, load_settings
 
-if not API_KEY:
-    raise SystemExit("BAPI_API_KEY is not set (https://businessapi.com.au/user/api-keys)")
-if ENV not in ("test", "live") or f"_{ENV}_" not in API_KEY:
-    raise SystemExit(f"BAPI_ENV={ENV} does not match the key prefix (bapi_sk_{ENV}_...)")
+SETTINGS = load_settings()
+if not SETTINGS.has_key:
+    raise SystemExit("No Business API key configured. " + SETUP_HINT)
+if SETTINGS.problems:
+    raise SystemExit("; ".join(SETTINGS.problems))
+API_KEY, ENV, ALLOW_LIVE = SETTINGS.api_key, SETTINGS.env, SETTINGS.allow_live
 
 BASE_URL = "https://businessapi.com.au/api/v2" if ENV == "live" else "https://businessapi.com.au/api/test/v2"
 
@@ -45,7 +45,7 @@ client = httpx.AsyncClient(
     event_hooks={"request": [_block_live_writes]},
 )
 
-spec = yaml.safe_load((Path(__file__).with_name("openapi.yaml")).read_text(encoding="utf-8"))
+spec = yaml.safe_load((Path(__file__).resolve().parent.parent / "openapi.yaml").read_text(encoding="utf-8"))
 
 mcp = FastMCP.from_openapi(
     openapi_spec=spec,

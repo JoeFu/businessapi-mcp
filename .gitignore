@@ -13,4 +13,8 @@ venv/
 *.log
 
 # Downloaded PDFs
-bapi-mcp/downloads/
+downloads/
+
+# Build output
+dist/
+*.egg-info/

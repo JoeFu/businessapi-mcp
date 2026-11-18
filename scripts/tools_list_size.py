@@ -1,7 +1,7 @@
 """
 Measure what a `tools/list` costs in model context under different context-size settings.
 
-    uv run --with fastmcp tools_list_size.py
+    uv run scripts/tools_list_size.py
 
 Each row starts server.py in a child process with the given env, connects in-process, and sums the JSON size of every
 tool definition (name + description + input schema + annotations) — i.e. what an MCP client hands the model on connect.
@@ -26,7 +26,7 @@ CONFIGS = [
 
 CHILD = r"""
 import asyncio, json, sys
-import server
+from businessapi_mcp import server
 from fastmcp import Client
 async def main():
     async with Client(server.mcp) as c:
@@ -38,7 +38,7 @@ asyncio.run(main())
 
 
 def main() -> None:
-    here = Path(__file__).parent
+    here = Path(__file__).resolve().parent.parent
     base_env = {**os.environ, "BAPI_API_KEY": os.environ.get("BAPI_API_KEY") or "bapi_sk_test_dummy", "BAPI_ENV": "test"}
     rows = []
     for label, env in CONFIGS:

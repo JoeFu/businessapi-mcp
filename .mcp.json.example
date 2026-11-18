@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "bapi": {
+      "command": "uvx",
+      "args": ["businessapi-mcp"]
+    },
+
+    "bapi-registrations": {
+      "command": "uvx",
+      "args": ["businessapi-mcp"],
+      "env": { "BAPI_TOOLSETS": "lookup,registrations,core" }
+    },
+    "bapi-monitoring": {
+      "command": "uvx",
+      "args": ["businessapi-mcp"],
+      "env": { "BAPI_TOOLSETS": "monitoring,webhooks" }
+    }
+  }
+}

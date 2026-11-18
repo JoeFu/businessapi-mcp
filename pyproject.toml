@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "businessapi-mcp"
+version = "0.1.0"
+description = "MCP server for businessapi.com.au — Australian ASIC / ATO / ABRS / PPSR registry API with dry-run-first lodgement tools"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Joe Fu" }]
+keywords = ["mcp", "model-context-protocol", "claude", "asic", "ato", "abn", "ppsr", "australia", "businessapi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "fastmcp>=4,<5",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+openapi = ["pyyaml>=6"]
+
+[project.scripts]
+businessapi-mcp = "businessapi_mcp.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/JoeFu/businessapi-mcp"
+Issues = "https://github.com/JoeFu/businessapi-mcp/issues"
+Changelog = "https://github.com/JoeFu/businessapi-mcp/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = ["pytest>=8", "pyyaml>=6"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/businessapi_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/businessapi_mcp", "tests", "scripts", "openapi.yaml", "README.md", "LICENSE", "CHANGELOG.md", "SECURITY.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
